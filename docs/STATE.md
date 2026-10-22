@@ -36,8 +36,8 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
      throttle slider changes it while it plays, Stop/Play toggles, no error shows. Chrome
      is not installed on this Mac, so the Chrome check is open.
   2. Node 26 must be installed on the lecture Mac and on the PATH that a git hook sees
-     (`node --version`). CI on ubuntu with Node 26 passed on `547ad4c` (21 s); the first
-     run of `core/alloc.test.js` on ubuntu is still to be read after the next push.
+     (`node --version`). CI on ubuntu with Node 26 is green through `eeb50a5` (48 s),
+     `core/alloc.test.js` included.
 
 (task + module + status, or one line per operation pointing at its `docs/<OPERATION>.md`;
 delete when done — an EMPTY section means nothing is in flight, so never park closed work
