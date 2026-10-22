@@ -17,8 +17,9 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   Pages can host it. Kemal enables Pages once (Settings, Pages, branch `main`, folder root)
   when the folder lands. High tier (the gate line changed): two fresh reviews, logic and
   portability (Opus 5.5, high, one after the other), both Accept with Manual Checks; Lows
-  in BACKLOG SFX-16. Waiting on Kemal reading the ten-line summary and the diff before the
-  commit. Manual checks owed to Kemal, in Safari from `python3 -m http.server 8000` at the
+  in BACKLOG SFX-16. Committed as `7000b14` after Kemal read the summary; pushed, CI green.
+  SFX-3 is done once the manual checks pass; then SFX-4 (the presentation draft, due
+  2026-10-29) or SFX-5 (the remaining Leeway recipes) per `docs/BACKLOG.md`. Manual checks owed to Kemal, in Safari from `python3 -m http.server 8000` at the
   repository root, `http://localhost:8000/playground/`:
   1. Pick the diesel example, press Play: sound starts on that first click, the button
      reads Stop, the throttle slider changes the sound.
@@ -33,7 +34,7 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   lines and got one reviewer each, not the high tier's two; the portability review of
   2026-10-22 covered their gate and CI lines after the fact (Accept with Manual Checks, one
   Medium: `doctor.sh` checks Node only with `.nvmrc` or a root `package.json`; fixed by
-  adding `.nvmrc` with `26` and updating `docs/DEV_SETUP.md` §2 in the next commit).
+  adding `.nvmrc` with `26` and updating `docs/DEV_SETUP.md` §2, commit `607f0cc`).
 
 - Setup (Claude Code, Fable 5.1, 2026-10-22): the kit v0.12.1 was installed with the
   `claude-code` overlay and every placeholder was filled from `docs/MySFXKit_brief.md` by the
