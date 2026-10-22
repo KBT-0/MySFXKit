@@ -1,7 +1,7 @@
 // The interpreter: runs a validated recipe plan. Exprs and params are evaluated once per
 // control block of BLOCK samples; the blocks' DSP runs per sample.
 import { BLOCKS } from './blocks.js';
-import { evaluate } from './expr.js';
+import { compileExpr, runExpr } from './expr.js';
 import { analyzeRecipe } from './validate.js';
 import { createRng } from './rng.js';
 
@@ -29,60 +29,94 @@ export function compileRecipe(recipe, { sampleRate } = {}) {
   const inputs = Object.create(null);  // no prototype: names come from pasted text
   for (const [name, spec] of Object.entries(plan.inputs)) inputs[name] = spec.default;
   const blockSeconds = BLOCK / sampleRate;
-  let run;  // everything reset() rebuilds: the generator, block state, glides, the partial block
+
+  // Everything step() reads is built here or in start(), so render() allocates nothing per block:
+  // every name an expr reads has a slot in one Float64Array of values, and every expr is compiled once.
+  const slots = new Map();
+  const slot = (name) => { if (!slots.has(name)) slots.set(name, slots.size); return slots.get(name); };
+  const expr = (ast) => compileExpr(ast, slot);
+  const inputSlots = Object.keys(inputs).map((name) => [name, slot(name)]);
+  const params = plan.params.map(({ name, rate, slew }) => ({ at: slot(name), rate: expr(rate), slew: slew && expr(slew) }));
+  const nodes = plan.nodes.map((n) => {
+    const keys = Object.keys(n.exprs), field = (key) => slot(`${n.id}.${key}`);
+    return {
+      n,
+      exprs: keys.map((key) => expr(n.exprs[key])),
+      at: keys.map(field),
+      gain: Object.hasOwn(n.exprs, 'gain') ? field('gain') : -1,  // -1: a pulse, which has no gain
+      params: Object.keys(BLOCKS[n.type].params).map(field),
+      gains: (n.gains ?? []).map(expr),
+      decay: n.env && expr(n.env.decay),
+      fieldAt: (BLOCKS[n.type].fields?.(n.node) ?? []).map(field),
+    };
+  });
+  const tmp = new Float64Array(1);  // the result of a glide's target or time, or of a decay
+  let run;  // everything reset() rebuilds: the generator, block state, values, the partial block
 
   const start = () => {
     const rng = createRng(plan.seed);
     const buffers = new Map(plan.nodes.map((n) => [n.id, new Float32Array(BLOCK)]));
     run = {
-      glides: new Map(),
-      scope: Object.create(null),
+      values: new Float64Array(slots.size),
+      first: true,  // the first block after start: every glide starts at its target
       read: BLOCK,  // read position in the output node's block; BLOCK means "compute the next one"
       output: buffers.get(plan.out),
-      nodes: plan.nodes.map((n) => ({
-        n,
-        out: buffers.get(n.id),
-        processor: BLOCKS[n.type].create(n.node, { sampleRate, rng }),
+      nodes: nodes.map((c) => ({
+        c,
+        p: new Float64Array(c.params.length + c.gains.length),  // the block's params, then the gains
+        processor: BLOCKS[c.n.type].create(c.n.node, { sampleRate, rng }),
+        out: buffers.get(c.n.id),
         io: {
-          in: Array.isArray(n.input) ? n.input.map((id) => buffers.get(id)) : buffers.get(n.input) ?? null,
-          sync: n.sync ? buffers.get(n.sync) : null,
+          in: Array.isArray(c.n.input) ? c.n.input.map((id) => buffers.get(id)) : buffers.get(c.n.input) ?? null,
+          sync: c.n.sync ? buffers.get(c.n.sync) : null,
         },
-        trigger: n.env ? buffers.get(n.env.trigger) : null,
-        envTime: Infinity,  // silent until the first trigger
+        trigger: c.n.env ? buffers.get(c.n.env.trigger) : null,
+        envTime: Float64Array.of(Infinity),  // silent until the first trigger
       })),
     };
   };
 
   const step = () => {
-    const { scope, glides } = run;
-    Object.assign(scope, inputs);
-    for (const { name, rate, slew } of plan.params) {
-      const target = finite(evaluate(rate, scope));
-      if (!slew || !glides.has(name)) glides.set(name, target);  // a glide starts at its target
+    const { values } = run;
+    for (let j = 0; j < inputSlots.length; j++) values[inputSlots[j][1]] = inputs[inputSlots[j][0]];
+    for (let j = 0; j < params.length; j++) {
+      const { at, rate, slew } = params[j];
+      runExpr(rate, values, tmp, 0);
+      const target = finite(tmp[0]);
+      if (!slew || run.first) values[at] = target;  // a glide starts at its target
       else {
-        const time = finite(evaluate(slew, scope));
-        const now = glides.get(name);
-        glides.set(name, time > 0 ? now + (target - now) * (1 - Math.exp(-blockSeconds / time)) : target);
+        runExpr(slew, values, tmp, 0);
+        const time = finite(tmp[0]), now = values[at];
+        values[at] = time > 0 ? now + (target - now) * (1 - Math.exp(-blockSeconds / time)) : target;
       }
-      scope[name] = glides.get(name);
     }
-    for (const node of run.nodes) {
-      const { n, out } = node;
-      const p = {};
-      for (const [key, ast] of Object.entries(n.exprs)) p[key] = finite(evaluate(ast, scope));
-      if (n.gains) p.gains = n.gains.map((ast) => finite(evaluate(ast, scope)));
+    run.first = false;
+    for (let k = 0; k < run.nodes.length; k++) {
+      const node = run.nodes[k], { c, p, out } = node;
+      for (let j = 0; j < c.at.length; j++) {
+        runExpr(c.exprs[j], values, values, c.at[j]);
+        values[c.at[j]] = finite(values[c.at[j]]);
+      }
+      for (let j = 0; j < c.params.length; j++) p[j] = values[c.params[j]];
+      for (let j = 0, at = c.params.length; j < c.gains.length; j++, at++) {
+        runExpr(c.gains[j], values, p, at);
+        p[at] = finite(p[at]);
+      }
       node.processor.process(p, node.io, out);
-      if (n.env) {
-        const decay = Math.max(finite(evaluate(n.env.decay, scope)), 1e-4);
+      const gain = c.gain < 0 ? 1 : values[c.gain];
+      if (c.decay) {
+        runExpr(c.decay, values, tmp, 0);
+        const decay = Math.max(finite(tmp[0]), 1e-4);
+        let time = node.envTime[0];
         for (let i = 0; i < BLOCK; i++) {
-          if (node.trigger[i] > 0) node.envTime = 0;
-          node.envTime += 1 / sampleRate;
-          out[i] *= p.gain * Math.exp(-node.envTime / decay);
+          if (node.trigger[i] > 0) time = 0;
+          time += 1 / sampleRate;
+          out[i] *= gain * Math.exp(-time / decay);
         }
-      } else if (p.gain !== undefined && p.gain !== 1) for (let i = 0; i < BLOCK; i++) out[i] *= p.gain;
+        node.envTime[0] = time;
+      } else if (gain !== 1) for (let i = 0; i < BLOCK; i++) out[i] *= gain;
       for (let i = 0; i < BLOCK; i++) out[i] = finite(out[i]);  // so no block state ever takes a NaN
-      for (const key of Object.keys(n.exprs)) scope[`${n.id}.${key}`] = p[key];
-      for (const [key, value] of Object.entries(node.processor.fields ?? {})) scope[`${n.id}.${key}`] = value;
+      for (let j = 0; j < c.fieldAt.length; j++) values[c.fieldAt[j]] = node.processor.fields[j];
     }
   };
 

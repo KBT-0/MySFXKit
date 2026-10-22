@@ -22,6 +22,7 @@ When work on a task starts, its line moves to `docs/STATE.md` and leaves this fi
 - SFX-12: the recipe glide starts at its target while Leeway spools up from idle; the output is not clamped to [-1, 1] (the adapter's job); `fire.gain` lags up to 127 samples (control rate). Lows from the 2026-10-22 reviews.
 - SFX-13: `adapters/web/`: `errorsOf` in `processor.js` dies on `throw undefined` (unreachable today); no `dispose()` on the player; inputs restart at defaults on each `load`; no fixture test guards the `adapters/web/` part of `build_test_cmd`; decide whether `GUARDED_EVAL` should cover `adapters/` (the test's own `await import()` needs an exemption). Lows from the 2026-10-22 adapter review.
 - SFX-14: a gate fixture that makes `build_test_cmd` fail when a module's test files are absent; and `module_roots` once two top-level modules exist (see SFX-11).
+- SFX-15: `core/alloc.test.js` charges the profiler's own `session.post` cost to the budget because `CORE` includes the test file; exclude `*.test.js` from the counted frames. The pulse block still allocates a boxed double per firing (`rng.next()` on the cold branch, about 6 KB per 10 s); either name the exception in `core/README.md` or draw without a returned double. Lows from the 2026-10-22 allocation review.
 
 ## Deferred / parked
 

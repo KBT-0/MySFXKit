@@ -1,14 +1,19 @@
-// The expr language of recipe parameters: parsed into an AST and walked, never run as code.
+// The expr language of recipe parameters: parsed into an AST, compiled to a stack program and run; never run as code.
 
-/** Functions an expr may call: name -> [min args, max args, implementation]. */
+// Opcodes of a compiled expr (`compileExpr`); NUM, REF, MIN and MAX take one operand.
+const NUM = 0, REF = 1, NEG = 2, ADD = 3, SUB = 4, MUL = 5, DIV = 6;
+const ABS = 7, MIN = 8, MAX = 9, CLAMP = 10, POW = 11, EXP = 12, SIN = 13;
+const OPS = Object.freeze({ '+': ADD, '-': SUB, '*': MUL, '/': DIV });
+
+/** Functions an expr may call: name -> [min args, max args, opcode]. */
 const FUNCTIONS = Object.freeze({
-  abs: [1, 1, Math.abs],
-  min: [2, Infinity, Math.min],
-  max: [2, Infinity, Math.max],
-  clamp: [3, 3, (x, lo, hi) => Math.min(Math.max(x, lo), hi)],
-  pow: [2, 2, Math.pow],
-  exp: [1, 1, Math.exp],
-  sin: [1, 1, Math.sin],
+  abs: [1, 1, ABS],
+  min: [2, Infinity, MIN],
+  max: [2, Infinity, MAX],
+  clamp: [3, 3, CLAMP],
+  pow: [2, 2, POW],
+  exp: [1, 1, EXP],
+  sin: [1, 1, SIN],
 });
 
 const MAX_LENGTH = 1000;
@@ -83,16 +88,63 @@ export function exprRefs(ast, into = new Set()) {
   return into;
 }
 
-/** Walks an AST; `scope[name]` gives each name's value. */
-export function evaluate(ast, scope) {
-  switch (ast.k) {
-    case 'num': return ast.v;
-    case 'ref': return scope[ast.name];
-    case 'neg': return -evaluate(ast.a, scope);
-    case 'call': return FUNCTIONS[ast.fn][2](...ast.args.map((a) => evaluate(a, scope)));
-    default: {
-      const a = evaluate(ast.a, scope), b = evaluate(ast.b, scope);
-      return ast.op === '+' ? a + b : ast.op === '-' ? a - b : ast.op === '*' ? a * b : a / b;
+/**
+ * Compiles an AST into a flat postfix program for `runExpr`, which runs it on a fixed stack and
+ * so allocates nothing (an audio thread runs it). `slot(name)` gives the index in `values` each
+ * name is read from. Returns `{ code, stack }`.
+ */
+export function compileExpr(ast, slot) {
+  const code = [];
+  let depth = 0, max = 0;
+  const push = () => { max = Math.max(max, ++depth); };
+  const emit = (node) => {
+    switch (node.k) {
+      case 'num': code.push(NUM, node.v); push(); break;
+      case 'ref': code.push(REF, slot(node.name)); push(); break;
+      case 'neg': emit(node.a); code.push(NEG); break;
+      case 'call':
+        node.args.forEach(emit);
+        code.push(FUNCTIONS[node.fn][2]);
+        if (node.fn === 'min' || node.fn === 'max') code.push(node.args.length);
+        depth -= node.args.length - 1;
+        break;
+      default: emit(node.a); emit(node.b); code.push(OPS[node.op]); depth--;
+    }
+  };
+  emit(ast);
+  return { code: Float64Array.from(code), stack: new Float64Array(max) };
+}
+
+/** Runs a program from `compileExpr` and writes its result to `into[at]`. Allocates nothing. */
+export function runExpr({ code, stack }, values, into, at) {
+  let sp = 0;
+  for (let pc = 0; pc < code.length;) {
+    switch (code[pc++]) {
+      case NUM: stack[sp++] = code[pc++]; break;
+      case REF: stack[sp++] = values[code[pc++]]; break;
+      case NEG: stack[sp - 1] = -stack[sp - 1]; break;
+      case ADD: sp--; stack[sp - 1] = stack[sp - 1] + stack[sp]; break;
+      case SUB: sp--; stack[sp - 1] = stack[sp - 1] - stack[sp]; break;
+      case MUL: sp--; stack[sp - 1] = stack[sp - 1] * stack[sp]; break;
+      case DIV: sp--; stack[sp - 1] = stack[sp - 1] / stack[sp]; break;
+      case ABS: stack[sp - 1] = Math.abs(stack[sp - 1]); break;
+      case EXP: stack[sp - 1] = Math.exp(stack[sp - 1]); break;
+      case SIN: stack[sp - 1] = Math.sin(stack[sp - 1]); break;
+      case POW: sp--; stack[sp - 1] = Math.pow(stack[sp - 1], stack[sp]); break;
+      case CLAMP: sp -= 2; stack[sp - 1] = Math.min(Math.max(stack[sp - 1], stack[sp]), stack[sp + 1]); break;
+      default: {  // MIN or MAX over the top n values, folded left to right
+        const isMin = code[pc - 1] === MIN, n = code[pc++];
+        sp -= n - 1;
+        for (let j = 0; j < n - 1; j++) stack[sp - 1] = isMin ? Math.min(stack[sp - 1], stack[sp + j]) : Math.max(stack[sp - 1], stack[sp + j]);
+      }
     }
   }
+  into[at] = stack[0];
+}
+
+/** Evaluates an AST once; `scope[name]` gives each name's value (a missing name reads NaN). */
+export function evaluate(ast, scope) {
+  const names = [...exprRefs(ast)], result = new Float64Array(1);
+  runExpr(compileExpr(ast, (name) => names.indexOf(name)), Float64Array.from(names, (name) => scope[name]), result, 0);
+  return result[0];
 }

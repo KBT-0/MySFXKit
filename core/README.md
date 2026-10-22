@@ -23,6 +23,11 @@ comes from one xorshift32 generator seeded from `recipe.seed` (`rng.js`, as Leew
 **Timing:** params and exprs are evaluated once per control block of 128 samples; blocks run
 per sample. A node's fields read by an expr (`fire.gain`) are control-rate values.
 
+**Real time:** once the JIT has optimized it (V8, measured on Node), `render` allocates
+nothing per block, so an audio thread (an AudioWorklet) can call it every 128 frames without
+garbage collection pauses; `alloc.test.js` measures it. The first second or so after a recipe
+loads may still allocate, and `compileRecipe` and `reset` allocate.
+
 ## Recipe format v0
 
 | Key | Meaning |
@@ -82,8 +87,8 @@ each field it reads orders that node first. A node's fields are its parameters (
 included) and, for a pulse, its `hold` names. A result that is not finite (a division by zero)
 counts as 0, and every result is clamped to ±1e6; so is every node's output sample, so NaN and
 Infinity never reach the output. An expr is at most 1000 characters. A parse error names the
-node, the parameter and the expr text. Exprs are parsed into a tree and walked; nothing is
-ever run as code.
+node, the parameter and the expr text. Exprs are parsed into a tree and compiled to a stack
+program of fixed opcodes; nothing is ever run as code.
 
 ## Blocks
 

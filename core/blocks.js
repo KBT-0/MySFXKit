@@ -9,7 +9,11 @@
 //   check    (node, report(path, message)) validates the block's non-expr options
 //   fields   (node) -> extra `<id>.<field>` names the block publishes
 //   create   (node, { sampleRate, rng }) -> { process(p, io, out), fields? }
-//            p: evaluated params; io: { in, sync } buffers; out: Float32Array to fill.
+//            p: a Float64Array of the evaluated `params` in the order listed, then the `gains`;
+//            io: { in, sync } buffers; out: Float32Array to fill; fields: a Float64Array of the
+//            values of the `fields` names, in their order.
+//            process() runs on an audio thread and allocates nothing: a block keeps its state in
+//            a typed array, since a number stored in a closure variable is boxed on every write.
 
 const TAU = 2 * Math.PI;
 const WAVES = ['sine', 'saw'];
@@ -31,16 +35,18 @@ export const BLOCKS = Object.freeze({
     },
     create(node, { sampleRate }) {
       const saw = node.wave === 'saw';
-      let phase = 0;
+      const state = new Float64Array(1);  // [phase]
       return {
         process(p, io, out) {
-          const step = p.freq / sampleRate;
+          const step = p[0] / sampleRate;  // p: [freq]
+          let phase = state[0];
           for (let i = 0; i < out.length; i++) {
             if (io.sync && io.sync[i] > 0) phase = 0;
             phase += step;
             phase -= Math.floor(phase);
             out[i] = saw ? 2 * phase - 1 : Math.sin(TAU * phase);
           }
+          state[0] = phase;
         },
       };
     },
@@ -50,11 +56,13 @@ export const BLOCKS = Object.freeze({
     params: { cutoff: 1000 },
     in: 'one',
     create(node, { sampleRate }) {
-      let state = 0;
+      const state = new Float64Array(1);
       return {
         process(p, io, out) {
-          const k = 1 - Math.exp(-TAU * Math.max(p.cutoff, 0) / sampleRate);
-          for (let i = 0; i < out.length; i++) out[i] = state += (io.in[i] - state) * k;
+          const k = 1 - Math.exp(-TAU * Math.max(p[0], 0) / sampleRate);
+          let y = state[0];
+          for (let i = 0; i < out.length; i++) out[i] = y += (io.in[i] - y) * k;
+          state[0] = y;
         },
       };
     },
@@ -64,17 +72,20 @@ export const BLOCKS = Object.freeze({
     params: { freq: 1000, damping: 1 },
     in: 'one',
     create(node, { sampleRate }) {
-      let low = 0, band = 0;
+      const state = new Float64Array(2);  // [low, band]
       return {
         process(p, io, out) {
-          const f = 2 * Math.sin(Math.PI * Math.min(Math.max(p.freq, 0), sampleRate / 6) / sampleRate);
+          let low = state[0], band = state[1];
+          const f = 2 * Math.sin(Math.PI * Math.min(Math.max(p[0], 0), sampleRate / 6) / sampleRate);
           // Stable only while f^2 + 2 f q < 4 (its update matrix): cap the damping just inside that.
-          const q = Math.min(Math.max(p.damping, 0.01), 2, 0.8 * (4 - f * f) / (2 * f));
+          const q = Math.min(Math.max(p[1], 0.01), 2, 0.8 * (4 - f * f) / (2 * f));
           for (let i = 0; i < out.length; i++) {
             low += f * band;
             band += f * (io.in[i] - low - q * band);
             out[i] = band;
           }
+          state[0] = low;
+          state[1] = band;
         },
       };
     },
@@ -84,7 +95,7 @@ export const BLOCKS = Object.freeze({
     params: { drive: 1 },
     in: 'one',
     create: () => ({
-      process(p, io, out) { for (let i = 0; i < out.length; i++) out[i] = Math.tanh(p.drive * io.in[i]); },
+      process(p, io, out) { for (let i = 0; i < out.length; i++) out[i] = Math.tanh(p[0] * io.in[i]); },
     }),
   },
 
@@ -94,10 +105,10 @@ export const BLOCKS = Object.freeze({
     create: () => ({
       process(p, io, out) {
         out.fill(0);
-        io.in.forEach((input, j) => {
-          const g = p.gains[j];
+        for (let j = 0; j < io.in.length; j++) {
+          const input = io.in[j], g = p[j];  // p: the gains
           for (let i = 0; i < out.length; i++) out[i] += g * input[i];
-        });
+        }
       },
     }),
   },
@@ -117,21 +128,23 @@ export const BLOCKS = Object.freeze({
     },
     fields: (node) => Object.keys(node.hold ?? {}),
     create(node, { sampleRate, rng }) {
-      const holds = Object.entries(node.hold ?? {});
-      const fields = Object.fromEntries(holds.map(([name, [, high]]) => [name, high]));
-      let phase = 0;
+      const ranges = Object.values(node.hold ?? {}), lows = ranges.map((r) => r[0]), highs = ranges.map((r) => r[1]);
+      const fields = Float64Array.from(highs);  // in the order of `fields(node)`
+      const state = new Float64Array(1);  // [phase]
       return {
         fields,
         process(p, io, out) {
-          const step = Math.min(Math.max(p.hz, 0) / sampleRate, 0.5), jitter = Math.min(Math.max(p.jitter, 0), 0.5);
+          const step = Math.min(Math.max(p[0], 0) / sampleRate, 0.5), jitter = Math.min(Math.max(p[1], 0), 0.5);  // p: [hz, jitter]
+          let phase = state[0];
           for (let i = 0; i < out.length; i++) {
             phase += step;
             out[i] = 0;
             if (phase < 1) continue;
             phase -= 1 + jitter * rng.next();
             out[i] = 1;
-            for (const [name, [low, high]] of holds) fields[name] = low + (high - low) * rng.unit();
+            for (let j = 0; j < fields.length; j++) fields[j] = lows[j] + (highs[j] - lows[j]) * rng.unit();
           }
+          state[0] = phase;
         },
       };
     },

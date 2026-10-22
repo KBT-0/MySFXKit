@@ -25,18 +25,19 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   interpreter, `createRecipePlayer`, `demo.html` with a throttle slider, 13 tests) and
   `node --test adapters/web/` in the gate. Review: Accept with Manual Checks (Opus 5.5,
   high, fresh); Lows in BACKLOG SFX-13/14.
-  Remaining in SFX-2: the core allocates about 16 KB per 128-sample block in `step()`
-  (`core/compile.js`), `expr.js` call evaluation and `blocks.js`; a real-time path must not
-  allocate per block. Next: a core worker keeps per-node param objects and scope keys from
-  compile time, with an allocation test (`v8.getHeapStatistics`), API unchanged.
+  Last part committed: the core no longer allocates per 128-sample block once V8 has
+  optimized `render` (exprs compiled to a flat stack program, slots and params in typed
+  arrays; output bit-identical to the previous code; `core/alloc.test.js` with the sampling
+  heap profiler). Review: Accept with Manual Checks (Opus 5.5, high, fresh); Lows in
+  BACKLOG SFX-15. SFX-2 is done once Kemal's listening check below passes; then SFX-3.
   Manual checks owed to Kemal:
   1. Serve the repository root (`python3 -m http.server 8000`), open
      `http://localhost:8000/adapters/web/demo.html` in Safari: Play gives the diesel, the
      throttle slider changes it while it plays, Stop/Play toggles, no error shows. Chrome
      is not installed on this Mac, so the Chrome check is open.
   2. Node 26 must be installed on the lecture Mac and on the PATH that a git hook sees
-     (`node --version`); CI on ubuntu with Node 26 ran for the first time on the push of
-     `547ad4c`, result not yet read.
+     (`node --version`). CI on ubuntu with Node 26 passed on `547ad4c` (21 s); the first
+     run of `core/alloc.test.js` on ubuntu is still to be read after the next push.
 
 (task + module + status, or one line per operation pointing at its `docs/<OPERATION>.md`;
 delete when done — an EMPTY section means nothing is in flight, so never park closed work
