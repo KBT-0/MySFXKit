@@ -21,6 +21,11 @@ player) with relative paths, so it runs from any static file server at the repos
 5. One slider per entry of `recipe.inputs` (its `min`, `max` and `default`, step 0.01)
    calls `player.setInput` while it moves. After each load the player gets each input's exact
    `default`, even where the slider rounds its position to the step.
+6. One button per game event, a `trigger` node of the recipe (`events.js` lists them with
+   their `range`, default `[0, 1]`), labelled with the node id, beside a strength slider over
+   that range (step 0.01) that starts at its top. A press calls `player.trigger(id, strength)`;
+   before the first Play there is no player, and the status line says to press Play first. A
+   recipe without a `trigger` node shows no event controls.
 
 The page never evaluates text: pasted text is data for `JSON.parse` and the core interpreter,
 and it reaches the page only through `textContent`.
@@ -41,5 +46,6 @@ On GitHub Pages (serving `main` at the root) the page is
 
 ## Tests
 
-`node --test playground/` (also run by `./scripts/check.sh`) tests `recipe_text.js`. The page
-itself has no automated test; it is checked by hand in a browser.
+`node --test playground/` (also run by `./scripts/check.sh`) tests `recipe_text.js` and
+`events.js`, and checks that every entry of `EXAMPLES` names a file that exists and passes
+`validateRecipe`. The page itself has no automated test; it is checked by hand in a browser.

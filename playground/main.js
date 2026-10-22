@@ -5,6 +5,7 @@ import { validateRecipe } from '../core/index.js';
 import { createRecipePlayer } from '../adapters/web/index.js';
 import { parseRecipeText } from './recipe_text.js';
 import { EXAMPLES } from './examples.js';
+import { listEvents } from './events.js';
 
 const examples = document.getElementById('examples');
 const textarea = document.getElementById('recipe');
@@ -13,6 +14,7 @@ const playButton = document.getElementById('play');
 const status = document.getElementById('status');
 const errorList = document.getElementById('errors');
 const inputsBox = document.getElementById('inputs');
+const eventsBox = document.getElementById('events');
 
 let recipe = null;   // the last recipe that passed validation
 let acceptedText = null;  // the textarea text `recipe` came from
@@ -58,6 +60,41 @@ function buildSliders() {
   inputsBox.replaceChildren(...sliders.map(({ row }) => row));
 }
 
+/**
+ * One button and one strength slider per game event (`trigger` node) of `recipe`; the slider
+ * spans the node's `range` and starts at its top, so a press is audible. A press while no sound
+ * plays only says so: the player exists after the first Play.
+ */
+function buildEvents() {
+  eventsBox.replaceChildren(...listEvents(recipe).map(({ id, range: [lo, hi] }) => {
+    const row = document.createElement('div');
+    row.className = 'input';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = id;
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = String(lo);
+    slider.max = String(hi);
+    slider.step = '0.01';
+    slider.value = String(hi);
+    slider.setAttribute('aria-label', `${id} strength`);
+    const shown = document.createElement('output');
+    shown.textContent = String(hi);
+    let strength = hi;  // the exact top; the slider's own value is rounded to its step
+    slider.addEventListener('input', () => {
+      shown.textContent = slider.value;
+      strength = Number(slider.value);
+    });
+    button.addEventListener('click', () => {
+      if (player) player.trigger(id, strength);
+      else showStatus('Press Play first, then fire the event.');
+    });
+    row.append(button, slider, shown);
+    return row;
+  }));
+}
+
 /** Sends `recipe` to the player, then the input values (the adapter restarts inputs at defaults). */
 async function sendRecipe() {
   await player.load(recipe);
@@ -84,6 +121,7 @@ function acceptText() {
   recipe = parsed;
   acceptedText = textarea.value;
   buildSliders();
+  buildEvents();
   showErrors([]);
   showStatus(`Loaded "${recipe.name}".`);
   return true;

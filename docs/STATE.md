@@ -11,32 +11,27 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
 
 ## Active work
 
-- SFX-5 (Claude Code, Opus 5.5 lead, 2026-10-22, lead session 3): in flight as four
-  sequential worker tasks in `core/`, each with one fresh review and its own commit:
-  (1) `lfo` + `randomWalk`, hull water and city bed; (2) `randomTrigger` + attack/release
-  envelope, horn and ferry; (3) `trigger` event input, hull impact; (4) `sequence`/`choose`,
-  gull. A fifth task in `playground/` then adds the examples and an impact trigger button.
-  Part 1 committed (Opus 5.5 worker sub-agent, high; review round 1 Accept with Manual
-  Checks with one Medium fixed by the author, round 2 Accept, both Opus 5.5 high, fresh).
-  Manual check owed to Kemal: listen to `hull_water` at speed 0, 0.5 and 1, and to
-  `city_bed`, against Leeway in game (possible once the examples are in the dropdown). At
-  speed 0 the water is very quiet (RMS 0.0065 against 0.12 at full speed), as in Leeway.
-  Part 2 committed (Opus 5.5 worker sub-agent, high; review round 1 Accept with Manual
-  Checks, Opus 5.5 high, fresh, Lows in BACKLOG SFX-18): `randomTrigger`, env `attack` and
-  `length`, horn and ferry. Manual check owed to Kemal: listen to `horn` and `ferry` beside
-  Leeway's city horn and ferry (the tests measure pitch, timing and length, not timbre).
-  Part 3 committed (Opus 5.5 worker sub-agent, high; review round 1 Accept, Opus 5.5 high,
-  fresh, Low in BACKLOG SFX-19): `trigger` block and `instance.trigger(name, strength)`
-  (PROJECT 2.5), `env.stop`, `renderOffline` events, `hull_impact`. Listening check of
-  `hull_impact` owed to Kemal. The web adapter forwards events: `player.trigger(name,
-  strength)` (Opus 5.5 worker sub-agent, high; review Accept, Opus 5.5 high, fresh; Low in
-  BACKLOG SFX-22). Event names are the ids of nodes with `type === "trigger"`.
-  Part 4 committed (Opus 5.5 worker sub-agent, high, one compaction; review round 1 Accept
-  with Manual Checks with one Medium fixed by the author in the docs, round 2 Accept, both
-  Opus 5.5 high, fresh; Lows in BACKLOG SFX-21): `sequence` with weighted `variants`
-  (PROJECT 2.6) and `gull`. NOT verified: the gull is not in `core/alloc.test.js`, so the
-  `sequence` block's no-allocation claim is untested until BACKLOG SFX-20 lands. Listening
-  check of `gull` against Leeway's `GullCall` owed to Kemal.
+- SFX-5 (Claude Code, Opus 5.5 lead, 2026-10-22/23, lead session 3; every worker an Opus
+  5.5 sub-agent at high effort, every review a fresh Opus 5.5 `diff-reviewer` at high):
+  all six remaining Leeway recipes are committed in `core/recipes/` with the blocks they
+  need (`lfo`, `randomWalk`, `randomTrigger`, env `attack`/`length`/`stop`, `trigger` and
+  `instance.trigger`, `sequence` with `variants`; PROJECT 2.4 to 2.6), the web adapter
+  forwards events (`player.trigger`), and the playground lists all seven examples with an
+  event button and strength slider per `trigger` node. Every part passed its review
+  (Lows in BACKLOG SFX-17 to SFX-19, SFX-21 to SFX-23). NOT verified: the gull is not in
+  `core/alloc.test.js` (BACKLOG SFX-20). SFX-5 is done once Kemal's checks below pass.
+  Manual checks owed to Kemal, in Safari from `python3 -m http.server 8000` at the
+  repository root, `http://localhost:8000/playground/` (or the Pages URL after a push):
+  1. Load each of the seven examples while a sound plays: each plays, no error shows.
+  2. Listen against Leeway in game: `hull_water` at speed 0, 0.5 and 1 (at 0 it is very
+     quiet, RMS 0.0065, as in Leeway), `city_bed`, `horn`, `ferry` (its first whistle comes
+     at 1 s, then every 35 to 90 s), `gull`. The tests measure pitch, timing and level,
+     not timbre.
+  3. Load "Hull impact (Leeway)", press `impact` before Play: the status asks for Play
+     first and nothing sounds. Press Play, then `impact` at strength 1, 0.5 and 0: the
+     thud weakens and is silent at 0.
+  4. Load the diesel: the event row disappears.
+  5. Press Stop, press `impact`, press Play: note whether a late thud sounds.
   GitHub Pages is live at `https://kbt-0.github.io/MySFXKit/playground/`; pushes rebuild it.
 - SFX-3 (Claude Code, Fable 5.1 lead; Opus 5.5 worker sub-agent, high effort, 2026-10-22):
   playground v0 in `playground/` (paste a recipe, fence stripping, schema errors, Play, one
