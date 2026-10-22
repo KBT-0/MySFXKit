@@ -132,3 +132,8 @@ Its **AÇIK** items (§5.1 format, §7 timings, §9 questions) are OPEN until Ke
 - 2.3 DECIDED — `KBT-0/MySFXKit` is a **public** repository from day one, so GitHub Pages can
   host the playground; the licence file (brief §9, MIT proposed) is still OPEN.
   Decided: 2026-10-22, approved by Kemal (he made it public himself).
+- 2.4 DECIDED — in a recipe, a node may read its OWN published fields (a `hold` value such
+  as `horn.length`), getting the previous control block's value (0 in the first), but never
+  its own parameters, which stay a cycle error. It lets Leeway's horn keep a fixed 0.12 s
+  gap between beeps (`spacing: "horn.length + 0.12"`); the alternative was a fixed spacing.
+  Decided: 2026-10-22, approved by Kemal ("Evet, kural kalsın", the recommended option).

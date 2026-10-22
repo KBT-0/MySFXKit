@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { compileRecipe, renderOffline } from './index.js';
-import { rms, peak, hasNaN, pulseRate, brightness, crossingRate } from './test_features.js';
+import { rms, peak, hasNaN, pulseRate, brightness, crossingRate, onsets, spectralPeak } from './test_features.js';
 
 const RATE = 48000;
 const diesel = JSON.parse(readFileSync(new URL('./recipes/diesel.json', import.meta.url), 'utf8'));
@@ -174,7 +174,10 @@ test('randomWalk: stays in range, picks a new target every [a, b] seconds, glide
 const hullWater = JSON.parse(readFileSync(new URL('./recipes/hull_water.json', import.meta.url), 'utf8'));
 const cityBed = JSON.parse(readFileSync(new URL('./recipes/city_bed.json', import.meta.url), 'utf8'));
 
-for (const [name, recipe, inputs] of [['hull_water', hullWater, { speed: 0.5 }], ['city_bed', cityBed, {}]]) test(`${name}: 10 s at 48 kHz is clean and bit-identical twice`, () => {
+const horn = JSON.parse(readFileSync(new URL('./recipes/horn.json', import.meta.url), 'utf8'));
+const ferry = JSON.parse(readFileSync(new URL('./recipes/ferry.json', import.meta.url), 'utf8'));
+
+for (const [name, recipe, inputs] of [['hull_water', hullWater, { speed: 0.5 }], ['city_bed', cityBed, {}], ['horn', horn, {}], ['ferry', ferry, {}]]) test(`${name}: 10 s at 48 kHz is clean and bit-identical twice`, () => {
   const a = clean(renderOffline(recipe, { sampleRate: RATE, seconds: 10, inputs }));
   assert.deepEqual(renderOffline(recipe, { sampleRate: RATE, seconds: 10, inputs }), a);
   assert.ok(rms(a) > 0.01, `${name} is silent`);
@@ -205,4 +208,99 @@ test('randomWalk range and pulse hold at the edge of a double still give a finit
   const held = renderOffline(fieldProbe({ id: 'p', type: 'pulse', hz: 100, hold: { g: [-1.7e308, 1.7e308] } }, 'g'), { sampleRate: RATE, seconds: 1 });
   const tail = held.slice(RATE / 10);  // high - low overflowed to +Infinity, so every draw read +1e6
   assert.ok(tail.some((v) => v < 0) && tail.some((v) => v > 0), 'pulse hold over [-1.7e308, 1.7e308] draws only one sign');
+});
+
+// The firing times (seconds) of a randomTrigger rendered as the output.
+const firings = (node, seconds, seed = 5) => {
+  const b = renderOffline({ name: 'r', version: 0, seed, nodes: [{ ...node, id: 'out', type: 'randomTrigger' }] }, { sampleRate: RATE, seconds });
+  return [...b.keys()].filter((i) => b[i] === 1).map((i) => i / RATE);
+};
+const TICK = 2 / RATE;  // a countdown in seconds lands on a sample: allow two samples either way
+const spread = (xs) => xs.reduce((m, x) => Math.max(m, x), -Infinity) - xs.reduce((m, x) => Math.min(m, x), Infinity);
+
+test('randomTrigger: the first event inside `first`, the next ones `every` [a, b] s apart', () => {
+  const at = firings({ every: [0.5, 1], first: [0.2, 0.3] }, 20);
+  assert.ok(at[0] >= 0.2 - TICK && at[0] <= 0.3 + TICK, `first event at ${at[0]} s`);
+  const gaps = at.slice(1).map((t, k) => t - at[k]);
+  assert.ok(gaps.length >= 19, `only ${at.length} events in 20 s`);
+  assert.ok(gaps.every((g) => g >= 0.5 - TICK && g <= 1 + TICK), `an interval outside [0.5, 1] s: ${gaps}`);
+  assert.ok(spread(gaps) > 0.2, 'the intervals do not vary');
+  const late = firings({ every: [0.5, 1] }, 2);
+  assert.ok(late[0] >= 0.5 - TICK && late[0] <= 1 + TICK, `without first, the first event at ${late[0]} s`);
+});
+
+test('randomTrigger: repeat [lo, hi] firings per event, spacing apart; spacing may read the held values', () => {
+  const at = firings({ every: [0.5, 1], repeat: [1, 3], spacing: 0.1 }, 30);
+  const events = [[at[0]]];
+  for (let k = 1; k < at.length; k++) (at[k] - at[k - 1] < 0.3 ? events.at(-1) : events[events.push([]) - 1]).push(at[k]);
+  const counts = events.map((e) => e.length);
+  assert.ok([1, 2, 3].every((n) => counts.includes(n)) && counts.every((n) => n >= 1 && n <= 3), `firings per event: ${counts}`);
+  for (const e of events) assert.ok(e.slice(1).every((t, k) => Math.abs(t - e[k] - 0.1) <= TICK), `repeats not 0.1 s apart: ${e}`);
+  const waits = events.slice(1).map((e, k) => e[0] - events[k].at(-1));
+  assert.ok(waits.every((w) => w >= 0.5 - TICK && w <= 1 + TICK), `a wait after an event's last firing outside [0.5, 1] s: ${waits}`);
+
+  const held = firings({ every: [0.5, 1], repeat: [2, 2], spacing: 'out.len + 0.05', hold: { len: [0.1, 0.3] } }, 30);
+  const pairs = held.filter((_, k) => k % 2 === 1).map((t, k) => t - held[2 * k]);
+  assert.ok(pairs.length >= 20 && pairs.every((g) => g >= 0.15 - TICK && g <= 0.35 + TICK), `spacing len + 0.05 outside [0.15, 0.35] s: ${pairs}`);
+  assert.ok(spread(pairs) > 0.1, 'the spacing does not follow the held value');
+});
+
+test('randomTrigger: each event draws every hold value in [lo, hi]', () => {
+  const values = clean(renderOffline(fieldProbe({ id: 'r', type: 'randomTrigger', every: [0.2, 0.4], first: [0, 0], hold: { g: [0.2, 0.6] } }, 'g'), { sampleRate: RATE, seconds: 10 }));
+  assert.ok(values.every((v) => v >= 0.2 - 1e-6 && v <= 0.6 + 1e-6), 'a held value outside [0.2, 0.6]');
+  assert.ok(new Set(values).size >= 20 && spread(values) > 0.3, 'hold does not draw a new value per event');
+});
+
+test('env: rises over attack, holds until length, then decays; a randomTrigger drives it; without attack and length it is exp(-t / decay)', () => {
+  const level = (env) => clean(renderOffline({
+    name: 'e', version: 0, seed: 1,
+    nodes: [{ id: 'r', type: 'randomTrigger', first: [0.5, 0.5], every: [100, 100] },
+      { id: 'out', type: 'osc', wave: 'saw', freq: 0, gain: -1, env: { trigger: 'r', ...env } }],  // a 0 Hz saw is -1: out is the level
+  }, { sampleRate: RATE, seconds: 1.5 }));
+  const b = level({ attack: 0.1, length: 0.3, decay: 0.05 });
+  const t0 = b.findIndex((v) => v > 0), at = (s) => b[t0 + Math.round(s * RATE) - 1];  // the level s seconds after the trigger
+  assert.ok(Math.abs(t0 / RATE - 0.5) <= TICK, `silent until the trigger, then starts at ${t0 / RATE} s`);
+  assert.ok(Math.abs(at(0.05) - 0.5) < 1e-3, `half-way up the attack: ${at(0.05)}`);
+  for (let s = 0.001; s < 0.1; s += 0.001) assert.ok(at(s + 0.001) > at(s), `the attack does not rise at ${s} s`);
+  assert.ok(b.slice(t0 + 0.1 * RATE, t0 + 0.3 * RATE).every((v) => Math.abs(v - 1) < 1e-6), 'not held at 1 from attack to length');
+  assert.ok(Math.abs(at(0.35) - Math.exp(-1)) < 1e-3, `one decay time after length: ${at(0.35)}`);
+  assert.ok(at(0.8) < 1e-4, 'not decayed');
+  const plain = level({ decay: 0.05 }), p0 = plain.findIndex((v) => v > 0);
+  assert.ok(Math.abs(plain[p0 + 0.05 * RATE - 1] - Math.exp(-1)) < 1e-3 && plain[p0] > 0.99, 'without attack and length the env is not exp(-t / decay)');
+});
+
+test('horn: the first event at 4 s; 1 or 2 beeps at 380 .. 470 Hz, 0.18 .. 0.35 s long, length + 0.12 s apart (Leeway CityNoise horns)', () => {
+  const b = clean(renderOffline(horn, { sampleRate: RATE, seconds: 90 }));
+  const starts = onsets(b, RATE);
+  assert.ok(Math.abs(starts[0] - 4) < 0.05, `first beep at ${starts[0]} s`);
+  const gaps = starts.slice(1).map((t, k) => t - starts[k]);
+  assert.ok(gaps.every((g) => (g >= 0.29 && g <= 0.48) || (g >= 5 && g <= 18.1)), `a gap that is neither a second beep nor a wait of 5 .. 18 s: ${gaps}`);
+  assert.ok(gaps.some((g) => g < 1) && gaps.some((g, k) => g > 1 && (k === 0 || gaps[k - 1] > 1)), 'no two-beep and no one-beep event');
+  const pitches = starts.map((t) => spectralPeak(b, RATE, 300, 560, Math.round((t + 0.02) * RATE), Math.round((t + 0.15) * RATE)));
+  assert.ok(pitches.every((f) => f >= 378 && f <= 472), `a beep pitch outside 380 .. 470 Hz: ${pitches}`);
+  assert.ok(spread(pitches) > 20, `every event at the same pitch: ${pitches}`);
+  for (const t of starts) {  // an onset is the start of a 20 ms window: the beep starts inside it
+    const loud = 0.1 * rms(b, Math.round((t + 0.02) * RATE), Math.round((t + 0.15) * RATE));
+    let from = Math.round((t - 0.01) * RATE);
+    while (rms(b, from, from + 48) < loud) from += 48;  // 1 ms steps
+    let end = from;
+    while (rms(b, end, end + 48) >= loud) end += 48;
+    assert.ok((end - from) / RATE >= 0.17 && (end - from) / RATE <= 0.37, `a beep ${(end - from) / RATE} s long`);
+  }
+});
+
+test('ferry: an event at 1 s, a 115 .. 145 Hz saw for 1.8 .. 2.6 s (Leeway CityNoise ferry)', () => {
+  const lengths = [];
+  for (let seed = 1; seed <= 6; seed++) {
+    const b = clean(renderOffline({ ...ferry, seed }, { sampleRate: RATE, seconds: 5 }));
+    const start = onsets(b, RATE)[0];
+    assert.ok(Math.abs(start - 1) < 0.15, `seed ${seed}: the event starts at ${start} s`);
+    const pitch = crossingRate(b.subarray(Math.round(1.3 * RATE), Math.round(2.6 * RATE)), RATE);
+    assert.ok(pitch >= 113 && pitch <= 147, `seed ${seed}: pitch ${pitch} Hz`);
+    const loud = 0.1 * rms(b, 1.3 * RATE, 2.6 * RATE) * Math.SQRT2, windows = [];
+    for (let i = 0; i + 480 <= b.length; i += 480) windows.push(rms(b, i, i + 480) > loud ? 1 : 0);  // 10 ms windows
+    lengths.push(windows.reduce((a, w) => a + w) / 100);
+  }
+  assert.ok(lengths.every((s) => s >= 1.75 && s <= 2.75), `an event length outside 1.8 .. 2.6 s: ${lengths}`);
+  assert.ok(spread(lengths) > 0.2, `every event the same length: ${lengths}`);
 });

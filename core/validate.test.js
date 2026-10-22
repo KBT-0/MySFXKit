@@ -45,7 +45,7 @@ test('validate: shapes, typos and option checks', () => {
   assert.match(errorsOf(recipe([{ id: 'out', type: 'osc', cuttoff: 3 }]))[0].message, /unknown key for a osc node/);
   assert.match(errorsOf(recipe([{ id: 'out', type: 'osc', wave: 'square' }]))[0].message, /must be one of sine, saw/);
   assert.match(errorsOf(recipe([{ id: 'p', type: 'pulse', hold: { g: [1, 0] } }, { id: 'out', type: 'osc' }]))[0].message, /low <= high/);
-  assert.match(errorsOf(recipe([{ id: 'n', type: 'noise' }, { id: 'out', type: 'lowpass', in: 'n', env: { trigger: 'n', decay: 1 } }]))[0].message, /must be a pulse node/);
+  assert.match(errorsOf(recipe([{ id: 'n', type: 'noise' }, { id: 'out', type: 'lowpass', in: 'n', env: { trigger: 'n', decay: 1 } }]))[0].message, /must be a trigger node \(pulse, randomTrigger\)/);
   assert.match(errorsOf(recipe([{ id: 'n', type: 'noise' }, { id: 'out', type: 'mix', in: ['n'], gains: [1, 2] }]))[0].message, /one gain per input/);
   assert.match(errorsOf({ ...recipe([{ id: 'out', type: 'osc' }]), seed: 1.5 })[0].path, /seed/);
   assert.match(errorsOf(recipe([{ id: 'out', type: 'osc' }], { inputs: { x: { min: 1, max: 0, default: 0 } } }))[0].message, /min <= default <= max/);
@@ -76,8 +76,8 @@ test('names like __proto__ and toString are plain names, not prototype lookups',
   assert.throws(() => instance.setInput('valueOf', 1), /unknown input/);
 });
 
-test('validate: the bundled hull_water and city_bed are valid', () => {
-  for (const name of ['hull_water', 'city_bed']) {
+test('validate: the bundled hull_water, city_bed, horn and ferry are valid', () => {
+  for (const name of ['hull_water', 'city_bed', 'horn', 'ferry']) {
     const r = JSON.parse(readFileSync(new URL(`./recipes/${name}.json`, import.meta.url), 'utf8'));
     assert.deepEqual(validateRecipe(r), { ok: true, errors: [] }, name);
   }
@@ -95,4 +95,34 @@ test('validate: lfo and randomWalk options, fields, and no gain or env', () => {
   assert.match(errorsOf(reading({ id: 'w', type: 'randomWalk', every: [-1, 4] }, 1))[0].message, /0 <= low <= high/);
   assert.match(errorsOf(reading({ id: 'w', type: 'randomWalk', every: 2 }, 1))[0].message, /\[low, high\] seconds/);
   assert.match(errorsOf(reading({ id: 'w', type: 'randomWalk', env: { trigger: 'w', decay: 1 } }, 1))[0].message, /unknown key for a randomWalk node/);
+});
+
+test('validate: randomTrigger options, and any trigger node drives an env or a sync', () => {
+  const firing = (node, extra = {}) => recipe([{ id: 'r', type: 'randomTrigger', ...node }, { id: 'out', type: 'osc', ...extra }]);
+  assert.deepEqual(errorsOf(firing({ every: [5, 18], first: [4, 4], repeat: [1, 2], spacing: 'r.length + 0.12', hold: { pitch: [380, 470], length: [0.18, 0.35] } },
+    { freq: 'r.pitch', sync: 'r', env: { trigger: 'r', attack: 0.01, length: 'r.length - 0.02', decay: 0.01 } })), []);
+  assert.match(errorsOf(firing({ every: [-1, 2] }))[0].message, /0 <= low <= high/);
+  assert.match(errorsOf(firing({ first: [2, 1] }))[0].message, /0 <= low <= high/);
+  assert.match(errorsOf(firing({ every: 3 }))[0].message, /\[low, high\] seconds/);
+  assert.match(errorsOf(firing({ repeat: [0, 2] }))[0].message, /two whole numbers with 1 <= low <= high/);
+  assert.match(errorsOf(firing({ repeat: [1, 2.5] }))[0].message, /two whole numbers/);
+  assert.match(errorsOf(firing({ hold: { spacing: [0, 1] } }))[0].message, /clashes with a parameter name/);
+  assert.match(errorsOf(firing({ hold: { g: [1, 0] } }))[0].message, /low <= high/);
+  assert.match(errorsOf(firing({ gain: 0.5 }))[0].message, /unknown key for a randomTrigger node/);
+  assert.match(errorsOf(firing({}, { freq: 'r.pitch' }))[0].message, /a randomTrigger node has spacing$/);
+});
+
+test('validate: env takes optional attack and length; other keys are rejected', () => {
+  const env = (e) => recipe([{ id: 'p', type: 'pulse', hold: { len: [0.1, 0.2] } }, { id: 'out', type: 'osc', env: e }]);
+  assert.deepEqual(errorsOf(env({ trigger: 'p', decay: 0.1, attack: 0.01, length: 'p.len' })), []);
+  assert.deepEqual(errorsOf(env({ trigger: 'p', decay: 0.1, length: 0.3 })), []);
+  assert.match(errorsOf(env({ trigger: 'p', decay: 0.1, release: 0.2 }))[0].message, /optional attack and length/);
+  assert.match(errorsOf(env({ trigger: 'p', attack: 0.1 }))[0].message, /decay: <seconds>/);
+  assert.match(errorsOf(env({ trigger: 'p', decay: 0.1, attack: 'p.nope' }))[0].message, /a pulse node has hz, jitter, len$/);
+});
+
+test('validate: a node may read its own published fields, never its own parameters', () => {
+  assert.deepEqual(errorsOf(recipe([{ id: 'p', type: 'pulse', hz: '10 * p.g', hold: { g: [1, 2] } }, { id: 'out', type: 'osc' }])), []);
+  assert.match(errorsOf(recipe([{ id: 'r', type: 'randomTrigger', spacing: 'r.spacing' }, { id: 'out', type: 'osc' }]))[0].message, /cycle: r -> r/);
+  assert.match(errorsOf(recipe([{ id: 'l', type: 'lfo', rate: 'l.rate + 1' }, { id: 'out', type: 'osc' }]))[0].message, /cycle: l -> l/);
 });

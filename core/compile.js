@@ -43,14 +43,16 @@ export function compileRecipe(recipe, { sampleRate } = {}) {
       n,
       exprs: keys.map((key) => expr(n.exprs[key])),
       at: keys.map(field),
-      gain: Object.hasOwn(n.exprs, 'gain') ? field('gain') : -1,  // -1: a pulse, which has no gain
+      gain: Object.hasOwn(n.exprs, 'gain') ? field('gain') : -1,  // -1: a trigger or control node, which has no gain
       params: Object.keys(BLOCKS[n.type].params).map(field),
       gains: (n.gains ?? []).map(expr),
       decay: n.env && expr(n.env.decay),
+      attack: n.env?.attack && expr(n.env.attack),
+      length: n.env?.length && expr(n.env.length),
       fieldAt: (BLOCKS[n.type].fields?.(n.node) ?? []).map(field),
     };
   });
-  const tmp = new Float64Array(1);  // the result of a glide's target or time, or of a decay
+  const tmp = new Float64Array(1);  // the result of a glide's target or time, or of an env time
   let run;  // everything reset() rebuilds: the generator, block state, values, the partial block
 
   const start = () => {
@@ -107,11 +109,14 @@ export function compileRecipe(recipe, { sampleRate } = {}) {
       if (c.decay) {
         runExpr(c.decay, values, tmp, 0);
         const decay = Math.max(finite(tmp[0]), 1e-4);
+        let attack = 0, length = 0;  // without them, the level is exp(-time / decay), as before they existed
+        if (c.attack) { runExpr(c.attack, values, tmp, 0); attack = Math.max(finite(tmp[0]), 0); }
+        if (c.length) { runExpr(c.length, values, tmp, 0); length = Math.max(finite(tmp[0]), 0); }
         let time = node.envTime[0];
         for (let i = 0; i < BLOCK; i++) {
           if (node.trigger[i] > 0) time = 0;
-          time += 1 / sampleRate;
-          out[i] *= gain * Math.exp(-time / decay);
+          time += 1 / sampleRate;  // so time > 0: with attack 0 the rise is 1, with length 0 the decay starts at once
+          out[i] *= gain * ((time < attack ? time / attack : 1) * (time > length ? Math.exp(-(time - length) / decay) : 1));
         }
         node.envTime[0] = time;
       } else if (gain !== 1) for (let i = 0; i < BLOCK; i++) out[i] *= gain;

@@ -1,0 +1,14 @@
+{
+  "name": "ferry",
+  "description": "Leeway's ferry horn (engine/audio/voices.hpp, CityNoise, its ferry layer), at full loudness. An event every 35 .. 90 s; each draws its pitch, 115 .. 145 Hz, and its length, 1.8 .. 2.6 s: a sawtooth low-passed at 600 Hz with a 0.15 s attack and a release over the last 0.3 s, gain 1.4, then Leeway's ferry 0.4 and master 0.8 into tanh. No inputs: distance and stereo placement (Leeway's cityPlacement, cityReference and rolloff) are the adapter's job, not this recipe's. Deviations: the first event comes at 1 s, where Leeway's comes at 25 s, so a short render or a listener in the playground hears it; the release is exponential (time constant 0.15 s, starting 0.3 s before the end) where Leeway's is a linear 0.3 s ramp to zero at the end; the wait for the next event starts at the event's start, where Leeway's starts at its end, so events come 1.8 .. 2.6 s sooner; the saw restarts its phase at each event and keeps running between events, where Leeway's pauses; the pitch and length reach the saw and the envelope once per 128-sample control block.",
+  "version": 0,
+  "seed": 37,
+  "nodes": [
+    { "id": "ferry", "type": "randomTrigger", "every": [35, 90], "first": [1, 1],
+      "hold": { "pitch": [115, 145], "length": [1.8, 2.6] } },
+    { "id": "saw", "type": "osc", "wave": "saw", "freq": "ferry.pitch", "sync": "ferry" },
+    { "id": "tone", "type": "lowpass", "in": "saw", "cutoff": 600, "gain": "1.4 * 0.4",
+      "env": { "trigger": "ferry", "attack": 0.15, "length": "ferry.length - 0.3", "decay": 0.15 } },
+    { "id": "out", "type": "shape", "in": "tone", "drive": 0.8 }
+  ]
+}

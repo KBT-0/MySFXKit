@@ -3,8 +3,9 @@
 // Entry fields:
 //   params   expr parameters and their defaults; each is also readable as `<id>.<param>`
 //   in       'one' (one node id) or 'list' (an array of ids, with optional per-input `gains`)
-//   sync     true: an optional `sync` names a pulse node that restarts the phase
-//   trigger  true: the output is a trigger train, so the node takes no `gain` and no `env`
+//   sync     true: an optional `sync` names a trigger node that restarts the phase
+//   trigger  true: the output is a trigger train (1 at a firing, else 0), so the node takes no
+//            `gain` and no `env`; any trigger node can drive an `env` or a `sync`
 //   control  true: the node only publishes `fields`; its output is silent, it takes no `gain` and no `env`
 //   options  other keys the block reads (not exprs), checked by `check`
 //   check    (node, report(path, message)) validates the block's non-expr options
@@ -19,6 +20,17 @@
 const TAU = 2 * Math.PI;
 const WAVES = ['sine', 'saw'];
 const isRange = (r) => Array.isArray(r) && r.length === 2 && r.every(Number.isFinite) && r[0] <= r[1];
+
+/** Checks a trigger block's `hold: { name: [lo, hi] }`, whose names must not clash with its `params`. */
+function checkHold(node, report, params) {
+  if (node.hold === undefined) return;
+  if (typeof node.hold !== 'object' || node.hold === null || Array.isArray(node.hold)) return report('hold', 'must be an object of name: [low, high]');
+  for (const [name, range] of Object.entries(node.hold)) {
+    if (!/^[A-Za-z_]\w*$/.test(name)) report(`hold.${name}`, 'is not a valid name');
+    else if (Object.hasOwn(params, name)) report(`hold.${name}`, 'clashes with a parameter name');
+    if (!isRange(range)) report(`hold.${name}`, 'must be [low, high], two numbers with low <= high');
+  }
+}
 
 export const BLOCKS = Object.freeze({
   noise: {
@@ -119,15 +131,7 @@ export const BLOCKS = Object.freeze({
     params: { hz: 1, jitter: 0 },
     trigger: true,
     options: ['hold'],
-    check(node, report) {
-      if (node.hold === undefined) return;
-      if (typeof node.hold !== 'object' || node.hold === null || Array.isArray(node.hold)) return report('hold', 'must be an object of name: [low, high]');
-      for (const [name, range] of Object.entries(node.hold)) {
-        if (!/^[A-Za-z_]\w*$/.test(name)) report(`hold.${name}`, 'is not a valid name');
-        else if (Object.hasOwn(BLOCKS.pulse.params, name)) report(`hold.${name}`, 'clashes with a parameter name');
-        if (!isRange(range)) report(`hold.${name}`, 'must be [low, high], two numbers with low <= high');
-      }
-    },
+    check: (node, report) => checkHold(node, report, BLOCKS.pulse.params),
     fields: (node) => Object.keys(node.hold ?? {}),
     create(node, { sampleRate, rng }) {
       const ranges = Object.values(node.hold ?? {}), lows = ranges.map((r) => r[0]), highs = ranges.map((r) => r[1]);
@@ -147,6 +151,47 @@ export const BLOCKS = Object.freeze({
             for (let j = 0; j < fields.length; j++) { const u = rng.unit(); fields[j] = lows[j] * (1 - u) + highs[j] * u; }  // high - low may overflow
           }
           state[0] = phase;
+        },
+      };
+    },
+  },
+
+  randomTrigger: {  // events at random intervals, as Leeway's city horns and ferry; per event: `hold` values and `repeat` firings
+    params: { spacing: 0.25 },
+    trigger: true,
+    options: ['every', 'first', 'repeat', 'hold'],
+    check(node, report) {
+      for (const key of ['every', 'first']) {
+        if (node[key] !== undefined && !(isRange(node[key]) && node[key][0] >= 0)) report(key, 'must be [low, high] seconds, two numbers with 0 <= low <= high');
+      }
+      if (node.repeat !== undefined && !(isRange(node.repeat) && node.repeat.every(Number.isInteger) && node.repeat[0] >= 1)) report('repeat', 'must be [low, high], two whole numbers with 1 <= low <= high');
+      checkHold(node, report, BLOCKS.randomTrigger.params);
+    },
+    fields: (node) => Object.keys(node.hold ?? {}),
+    create(node, { sampleRate, rng }) {
+      const ranges = Object.values(node.hold ?? {}), lows = ranges.map((r) => r[0]), highs = ranges.map((r) => r[1]);
+      const [soonest, latest] = node.every ?? [1, 4], [fewest, most] = node.repeat ?? [1, 1], first = node.first ?? [soonest, latest];
+      const fields = Float64Array.from(highs);  // in the order of `fields(node)`
+      const dt = 1 / sampleRate, u = rng.unit();
+      const state = Float64Array.of(first[0] * (1 - u) + first[1] * u, 0, 0);  // [seconds until the next event, firings left in it, seconds since the last firing]
+      return {
+        fields,
+        process(p, io, out) {  // p: [spacing], seconds between the firings of one event
+          for (let i = 0; i < out.length; i++) {
+            out[i] = 0;
+            if (state[1] > 0) {  // an event's repeat; the wait for the next event starts after its last firing
+              if ((state[2] += dt) < p[0]) continue;
+              state[1]--;
+            } else {
+              if ((state[0] -= dt) > 0) continue;
+              for (let j = 0; j < fields.length; j++) { const v = rng.unit(); fields[j] = lows[j] * (1 - v) + highs[j] * v; }  // high - low may overflow
+              state[1] = fewest + Math.floor(rng.unit() * (most - fewest + 1)) - 1;  // unit() < 1, so at most `most` firings
+              const w = rng.unit();
+              state[0] = soonest * (1 - w) + latest * w;
+            }
+            state[2] = 0;
+            out[i] = 1;
+          }
         },
       };
     },

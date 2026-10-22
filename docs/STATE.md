@@ -21,6 +21,10 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   Manual check owed to Kemal: listen to `hull_water` at speed 0, 0.5 and 1, and to
   `city_bed`, against Leeway in game (possible once the examples are in the dropdown). At
   speed 0 the water is very quiet (RMS 0.0065 against 0.12 at full speed), as in Leeway.
+  Part 2 committed (Opus 5.5 worker sub-agent, high; review round 1 Accept with Manual
+  Checks, Opus 5.5 high, fresh, Lows in BACKLOG SFX-18): `randomTrigger`, env `attack` and
+  `length`, horn and ferry. Manual check owed to Kemal: listen to `horn` and `ferry` beside
+  Leeway's city horn and ferry (the tests measure pitch, timing and length, not timbre).
   GitHub Pages is live at `https://kbt-0.github.io/MySFXKit/playground/`; pushes rebuild it.
 - SFX-3 (Claude Code, Fable 5.1 lead; Opus 5.5 worker sub-agent, high effort, 2026-10-22):
   playground v0 in `playground/` (paste a recipe, fence stripping, schema errors, Play, one

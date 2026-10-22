@@ -41,7 +41,7 @@ async function coreAllocations(work) {
   }
 }
 
-for (const [name, recipe, inputs] of [['diesel', diesel, { throttle: 0.5 }], ['others', others, {}], ['hull_water', load('hull_water'), { speed: 0.5 }], ['city_bed', load('city_bed'), {}]]) test(`${name}: render allocates nothing per control block once optimized (an AudioWorklet calls it every 128 frames)`, async () => {
+for (const [name, recipe, inputs] of [['diesel', diesel, { throttle: 0.5 }], ['others', others, {}], ['hull_water', load('hull_water'), { speed: 0.5 }], ['city_bed', load('city_bed'), {}], ['horn', load('horn'), {}], ['ferry', load('ferry'), {}]]) test(`${name}: render allocates nothing per control block once optimized (an AudioWorklet calls it every 128 frames)`, async () => {
   const instance = compileRecipe(recipe, { sampleRate: RATE });
   for (const [input, value] of Object.entries(inputs)) instance.setInput(input, value);
   const out = new Float32Array(128);

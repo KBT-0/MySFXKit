@@ -9,6 +9,9 @@ const TOP_KEYS = ['name', 'description', 'version', 'seed', 'inputs', 'params', 
 const isObject = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
 /** A trigger or control block: its output is not a sound, so it takes no `gain` and no `env`. */
 const bare = (def) => def.trigger || def.control;
+/** The block types whose output is a trigger train: they can drive an `env` or a `sync`. */
+const TRIGGERS = Object.keys(BLOCKS).filter((type) => BLOCKS[type].trigger).join(', ');
+const ENV_KEYS = ['trigger', 'decay', 'attack', 'length'];
 
 /**
  * Validates a recipe (parsed JSON). Returns `{ ok, errors }`; each error is
@@ -116,9 +119,9 @@ export function analyzeRecipe(recipe) {
     for (const key of Object.keys(node)) if (!allowed.includes(key)) report(id, at(key), `unknown key for a ${node.type} node`);
     def.check?.(node, (key, message) => report(id, at(key), message));
 
-    const nodeId = (value, key, pulse) => {
+    const nodeId = (value, key, trigger) => {
       if (typeof value !== 'string' || !byId.has(value)) { report(id, at(key), `"${value}" is not a node id`); return null; }
-      if (pulse && typed(value) && byId.get(value).node.type !== 'pulse') { report(id, at(key), `"${value}" must be a pulse node`); return null; }
+      if (trigger && typed(value) && !BLOCKS[byId.get(value).node.type].trigger) { report(id, at(key), `"${value}" must be a trigger node (${TRIGGERS})`); return null; }
       deps.add(value);
       return value;
     };
@@ -137,14 +140,19 @@ export function analyzeRecipe(recipe) {
     const sync = node.sync === undefined ? null : nodeId(node.sync, 'sync', true);
     let env = null;
     if (node.env !== undefined) {
-      if (!isObject(node.env) || node.env.trigger === undefined || node.env.decay === undefined || Object.keys(node.env).length !== 2) report(id, at('env'), 'must be { trigger: <pulse id>, decay: <seconds> }');
-      else env = { trigger: nodeId(node.env.trigger, 'env.trigger', true), decay: parse(node.env.decay, id, at('env.decay'), refs) };
+      if (!isObject(node.env) || node.env.trigger === undefined || node.env.decay === undefined || !Object.keys(node.env).every((k) => ENV_KEYS.includes(k))) {
+        report(id, at('env'), 'must be { trigger: <trigger node id>, decay: <seconds> } with optional attack and length, in seconds');
+      } else {
+        env = { trigger: nodeId(node.env.trigger, 'env.trigger', true) };
+        for (const key of ENV_KEYS.slice(1)) if (node.env[key] !== undefined) env[key] = parse(node.env[key], id, at(`env.${key}`), refs);
+      }
     }
     for (const { name, path, text } of refs) {
       const [other, field] = name.split('.');
       if (!byId.has(other)) report(id, path, `"${text}" reads "${name}", but "${other}" is not a node id`);
       else if (typed(other) && !fieldsOf(other).includes(field)) report(id, path, `"${text}" reads "${name}"; a ${byId.get(other).node.type} node has ${fieldsOf(other).join(', ')}`);
-      else deps.add(other);
+      // A node may read its own published fields (a held value): it gets the previous control block's.
+      else if (other !== id || !(def.fields?.(node) ?? []).includes(field)) deps.add(other);
     }
     planned.set(id, { id, type: node.type, node, exprs, input, gains, sync, env, deps });
   }

@@ -41,10 +41,15 @@ loads may still allocate, and `compileRecipe` and `reset` allocate.
 | `nodes` | `[{ id, type, ... }]`: the block graph (table below); order does not matter, cycles are rejected |
 | `out` | the id of the output node; missing, the node with id `out` |
 
-Every node parameter is a number or an expr string. Every node except a `pulse`, an `lfo` or a
-`randomWalk` also takes
-`gain` (default 1) and `env: { trigger: <pulse id>, decay: <seconds> }`, an exponential decay
-`exp(-t / decay)` restarted at each pulse and silent before the first. Unknown keys are errors.
+Every node parameter is a number or an expr string. Every node except a trigger block (`pulse`,
+`randomTrigger`) or a control block (`lfo`, `randomWalk`) also takes `gain` (default 1) and
+`env: { trigger, decay, attack, length }`: an envelope restarted at each firing of the trigger
+node `trigger` (any trigger block) and silent before the first. `decay`, `attack` and `length`
+are exprs in seconds, evaluated once per control block; `attack` and `length` are optional
+(0). At `t` seconds after the firing the level is `min(1, t / attack)`, times 1 while
+`t < length` and `exp(-(t - length) / decay)` after: it rises over `attack`, holds until
+`length`, then decays. Without `attack` and `length` it is the decay `exp(-t / decay)`.
+`length` may read a held value (`horn.length - 0.02`). Unknown keys are errors.
 
 The diesel (`recipes/diesel.json`) is a port of Leeway's `Diesel` (`engine/audio/voices.hpp`)
 with Leeway's numbers: firing 4.5 Hz at idle to 13 Hz at full throttle, glide 1/1.2 s, period
@@ -57,6 +62,14 @@ The hull water (`recipes/hull_water.json`) is a port of Leeway's `HullWater`, in
 The city bed (`recipes/city_bed.json`) is Leeway's `CityNoise` bed layer (rumble and traffic,
 no horns or ferry) for one listener distance, with no inputs: a `randomWalk` traffic level.
 The per-building distance sum and stereo placement stay game or adapter code.
+
+The horn (`recipes/horn.json`) is Leeway's `CityNoise` car horn, no inputs: a `randomTrigger`
+every 5–18 s (the first at 4 s, as Leeway's) of 1 or 2 beeps, each event with a pitch of
+380–470 Hz and a beep length of 0.18–0.35 s, two `tanh`-shaped sines low-passed at 1500 Hz
+under an attack/length/decay `env`. The ferry (`recipes/ferry.json`) is Leeway's ferry horn:
+an event every 35–90 s (the first at 1 s, not Leeway's 25 s, so a short render hears it), a
+115–145 Hz saw low-passed at 600 Hz for 1.8–2.6 s. Placement (distance, pan) is the
+adapter's; each recipe's `description` lists its deviations from Leeway.
 
 ```json
 {
@@ -93,8 +106,10 @@ The per-building distance sum and stereo placement stay game or adapter code.
 
 A param reads inputs and earlier params. A node reads inputs, params and other nodes' fields;
 each field it reads orders that node first. A node's fields are its parameters (`gain`
-included), for a pulse its `hold` names, for an `lfo` `value` (and `harmonic`), for a
-`randomWalk` `value`. A result that is not finite (a division by zero)
+included), for a `pulse` or a `randomTrigger` its `hold` names, for an `lfo` `value` (and
+`harmonic`), for a `randomWalk` `value`. A node may also read its own published fields (not its
+parameters): it gets their value at the end of the previous control block, 0 in the first
+(`spacing: "horn.length + 0.12"`). A result that is not finite (a division by zero)
 counts as 0, and every result is clamped to ±1e6; so is every node's output sample, so NaN and
 Infinity never reach the output. An expr is at most 1000 characters. A parse error names the
 node, the parameter and the expr text. Exprs are parsed into a tree and compiled to a stack
@@ -105,12 +120,13 @@ program of fixed opcodes; nothing is ever run as code.
 | Type | Parameters (default) | Output |
 |---|---|---|
 | `noise` | none | seeded white noise, uniform in [-1, 1) |
-| `osc` | `freq` Hz (440), `wave`: `sine` (default) or `saw`, `sync`: a pulse id (optional) | a sine or a rising saw in [-1, 1]; `sync` restarts its phase at each pulse |
+| `osc` | `freq` Hz (440), `wave`: `sine` (default) or `saw`, `sync`: a trigger node id (optional) | a sine or a rising saw in [-1, 1]; `sync` restarts its phase at each firing |
 | `lowpass` | `in`, `cutoff` Hz (1000) | one-pole low-pass of `in` |
 | `bandpass` | `in`, `freq` Hz (1000), `damping` (1; 2 is wide, 0.2 sharp) | Chamberlin state-variable band-pass of `in` (peak gain 1 / damping); near `freq` = sampleRate / 6 the damping is capped below 2 to keep the filter stable |
 | `shape` | `in`, `drive` (1) | `tanh(drive * in)`, a soft clip into (-1, 1) |
 | `mix` | `in`: a list of ids, `gains`: one expr per input (all 1) | the weighted sum |
 | `pulse` | `hz` (1), `jitter` (0, at most 0.5), `hold: { name: [lo, hi] }` | one-sample triggers; each period is `(1 ± jitter) / hz`; each pulse draws every `hold` value uniformly from [lo, hi], readable as `<id>.<name>` |
+| `randomTrigger` | `every: [a, b]` seconds ([1, 4]), `first: [a, b]` seconds (`every`), `repeat: [lo, hi]` whole numbers ([1, 1]), `spacing` seconds (0.25), `hold: { name: [lo, hi] }` | one-sample triggers in events: the first event `first` seconds in, each next one a wait drawn uniformly from `every` after the previous event's last firing; each event draws every `hold` value uniformly from [lo, hi] (readable as `<id>.<name>`) and a count of firings uniformly from `repeat`, `spacing` seconds apart (evaluated once per control block) |
 | `lfo` | `rate` Hz (1), `harmonic`: a whole number n >= 1 (optional) | silent; publishes `<id>.value` = sin(2π · phase) and, with `harmonic`, `<id>.harmonic` = sin(2π · n · phase), once per control block; the phase starts at 0 |
 | `randomWalk` | `range: [lo, hi]` ([0, 1]), `every: [a, b]` seconds ([1, 4]), `slew` seconds (1) | silent; publishes `<id>.value`, which starts mid-range and glides (time constant `slew`; 0 jumps) toward a target drawn uniformly from `range`; a new target and a new wait drawn from `every` when the wait runs out, the first at once; once per control block |
 

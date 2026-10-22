@@ -51,3 +51,16 @@ export function crossingRate(b, sampleRate) {
   for (let i = 1; i < b.length; i++) if (b[i - 1] < 0 && b[i] >= 0) n++;
   return n * sampleRate / b.length;
 }
+
+/** The frequency in [lo, hi] (Hz, in steps of `step`) with the most power over `b[from, to)`, by Goertzel. */
+export function spectralPeak(b, sampleRate, lo, hi, from = 0, to = b.length, step = 1) {
+  let best = lo, bestPower = -1;
+  for (let f = lo; f <= hi; f += step) {
+    const k = 2 * Math.cos(2 * Math.PI * f / sampleRate);
+    let s1 = 0, s2 = 0;
+    for (let i = from; i < to; i++) { const s = b[i] + k * s1 - s2; s2 = s1; s1 = s; }
+    const power = s1 * s1 + s2 * s2 - k * s1 * s2;
+    if (power > bestPower) { bestPower = power; best = f; }
+  }
+  return best;
+}

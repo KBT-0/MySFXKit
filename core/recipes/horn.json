@@ -1,0 +1,18 @@
+{
+  "name": "horn",
+  "description": "Leeway's city car horns (engine/audio/voices.hpp, CityNoise, its horn layer), one horn at full loudness. An event every 5 .. 18 s of 1 or 2 beeps (even odds); each event draws its pitch, 380 .. 470 Hz, and its beep length, 0.18 .. 0.35 s; the beeps start length + 0.12 s apart. Each beep: two sines, at the pitch and at 1.25 times it, each through tanh(3 x), mixed 1 : 0.7, low-passed at 1500 Hz, with a 10 ms attack and a release at the beep's end; then Leeway's horns 0.3 and master 0.8 into tanh. The first event comes at 4 s, as Leeway's. No inputs: distance and stereo placement (Leeway's cityPlacement, cityReference and rolloff) are the adapter's job, not this recipe's. Deviations: the release is exponential (time constant 10 ms, starting 20 ms before the beep's end) where Leeway's is a linear 20 ms ramp to zero at the end; the wait for the next event starts at the last beep's start, where Leeway's starts after that beep and its 0.12 s gap, so events come 0.30 .. 0.47 s sooner; Leeway's second sine wraps its phase together with the first (a small step once per cycle), ours is a clean sine; both sines restart their phase at each beep and keep running between beeps, where Leeway's pause; the pitch and length reach the sines and the envelope once per 128-sample control block.",
+  "version": 0,
+  "seed": 31,
+  "nodes": [
+    { "id": "horn", "type": "randomTrigger", "every": [5, 18], "first": [4, 4], "repeat": [1, 2],
+      "spacing": "horn.length + 0.12", "hold": { "pitch": [380, 470], "length": [0.18, 0.35] } },
+    { "id": "low", "type": "osc", "wave": "sine", "freq": "horn.pitch", "sync": "horn" },
+    { "id": "high", "type": "osc", "wave": "sine", "freq": "1.25 * horn.pitch", "sync": "horn" },
+    { "id": "lowShaped", "type": "shape", "in": "low", "drive": 3 },
+    { "id": "highShaped", "type": "shape", "in": "high", "drive": 3 },
+    { "id": "two", "type": "mix", "in": ["lowShaped", "highShaped"], "gains": [1, 0.7] },
+    { "id": "tone", "type": "lowpass", "in": "two", "cutoff": 1500, "gain": 0.3,
+      "env": { "trigger": "horn", "attack": 0.01, "length": "horn.length - 0.02", "decay": 0.01 } },
+    { "id": "out", "type": "shape", "in": "tone", "drive": 0.8 }
+  ]
+}
