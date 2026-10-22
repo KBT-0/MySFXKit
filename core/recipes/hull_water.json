@@ -1,0 +1,18 @@
+{
+  "name": "hull_water",
+  "description": "Leeway's water along the hull (engine/audio/voices.hpp, HullWater): slow lapping at rest, a rushing wash that grows and brightens with speed (0 .. 1, the boat's speed over its top speed). Leeway's numbers: a 0.13 Hz swell with a 3x harmonic on the lapping, lapping noise low-passed at 180 Hz, wash low-passed at 300 + 1700 * speed with gain 2.2 * pow(speed, 1.3), then Leeway's water 0.45 and master 0.8 into tanh. Deviations: the swell is evaluated once per 128-sample control block, not per sample; distance and stereo placement (Leeway's boatReference and rolloff) are the adapter's, not this recipe's.",
+  "version": 0,
+  "seed": 11,
+  "inputs": { "speed": { "min": 0, "max": 1, "default": 0 } },
+  "nodes": [
+    { "id": "swell", "type": "lfo", "rate": 0.13, "harmonic": 3 },
+    { "id": "lapNoise", "type": "noise" },
+    { "id": "lap", "type": "lowpass", "in": "lapNoise", "cutoff": 180 },
+    { "id": "washNoise", "type": "noise" },
+    { "id": "wash", "type": "lowpass", "in": "washNoise", "cutoff": "300 + 1700 * speed" },
+    { "id": "water", "type": "mix", "in": ["lap", "wash"],
+      "gains": ["0.45 * (0.65 + 0.35 * swell.value) * (0.35 + 0.25 * swell.harmonic)",
+                "0.45 * (0.65 + 0.35 * swell.value) * 2.2 * pow(speed, 1.3)"] },
+    { "id": "out", "type": "shape", "in": "water", "drive": 0.8 }
+  ]
+}

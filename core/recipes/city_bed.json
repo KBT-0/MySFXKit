@@ -1,0 +1,17 @@
+{
+  "name": "city_bed",
+  "description": "Leeway's city noise bed heard from the water (engine/audio/voices.hpp, CityNoise, its bed layer): a low rumble and traffic that swells and fades, for ONE listener distance at full loudness. The per-building distance sum (Leeway's cityPlacement), the zoom and the stereo placement stay game or adapter code, not this recipe; the horns and the ferry are separate sounds. No inputs: Leeway's bed has no game-driven parameter besides distance. Leeway's numbers: rumble noise low-passed at 140 Hz then 220 Hz, gain 1.8; traffic noise band-passed at 650 Hz, damping 1.2, gain 1.4 times a traffic level that heads for a new target in 0.2 .. 1 every 1.5 .. 4 s with smoothing 0.8 per second (time constant 1.25 s); then Leeway's city 0.8 and master 0.8 into tanh. Deviations: the traffic level is updated once per 128-sample control block, not per sample, and starts at 0.6 (mid-range) where Leeway starts at 0.5.",
+  "version": 0,
+  "seed": 23,
+  "nodes": [
+    { "id": "traffic", "type": "randomWalk", "range": [0.2, 1], "every": [1.5, 4], "slew": 1.25 },
+    { "id": "rumbleNoise", "type": "noise" },
+    { "id": "rumble", "type": "lowpass", "in": "rumbleNoise", "cutoff": 140 },
+    { "id": "rumbleSmooth", "type": "lowpass", "in": "rumble", "cutoff": 220 },
+    { "id": "carNoise", "type": "noise" },
+    { "id": "cars", "type": "bandpass", "in": "carNoise", "freq": 650, "damping": 1.2 },
+    { "id": "bed", "type": "mix", "in": ["rumbleSmooth", "cars"],
+      "gains": ["0.8 * 1.8", "0.8 * 1.4 * traffic.value"] },
+    { "id": "out", "type": "shape", "in": "bed", "drive": 0.8 }
+  ]
+}

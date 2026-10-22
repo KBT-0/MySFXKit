@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { compileRecipe, renderOffline } from './index.js';
-import { rms, peak, hasNaN, pulseRate } from './test_features.js';
+import { rms, peak, hasNaN, pulseRate, brightness, crossingRate } from './test_features.js';
 
 const RATE = 48000;
 const diesel = JSON.parse(readFileSync(new URL('./recipes/diesel.json', import.meta.url), 'utf8'));
@@ -138,4 +138,71 @@ test('pulse: jitter spreads the periods, hold draws each pulse a value in [lo, h
   for (let s = 1; s < 19; s++) levels.push(rms(held, s * 4800 + 1200, s * 4800 + 3600) / Math.SQRT1_2);
   assert.ok(levels.every((l) => l >= 0.2 - 1e-3 && l <= 0.4 + 1e-3), `a held value outside [0.2, 0.4]: ${levels}`);
   assert.ok(Math.max(...levels) - Math.min(...levels) > 0.1, 'hold does not draw a new value per pulse');
+});
+
+// A saw at 0 Hz is a constant -1, so `gain: '-x.value'` renders a control field as samples, one value per block.
+const fieldProbe = (node, field) => ({ name: 'probe', version: 0, seed: 9, nodes: [node, { id: 'out', type: 'osc', wave: 'saw', freq: 0, gain: `-${node.id}.${field}` }] });
+const BLOCK_SECONDS = 128 / RATE;
+
+test('lfo: value is a unit sine at its rate, harmonic at n times the rate', () => {
+  const node = { id: 'l', type: 'lfo', rate: 2, harmonic: 3 };
+  const value = clean(renderOffline(fieldProbe(node, 'value'), { sampleRate: RATE, seconds: 10 }));
+  const harmonic = clean(renderOffline(fieldProbe(node, 'harmonic'), { sampleRate: RATE, seconds: 10 }));
+  assert.ok(Math.abs(crossingRate(value, RATE) - 2) <= 0.15, `value at ${crossingRate(value, RATE)} Hz, expected 2`);
+  assert.ok(Math.abs(crossingRate(harmonic, RATE) - 6) <= 0.15, `harmonic at ${crossingRate(harmonic, RATE)} Hz, expected 6`);
+  assert.ok(peak(value) > 0.99 && Math.abs(rms(value) - Math.SQRT1_2) < 0.01, 'value is not a unit sine');
+  const slow = clean(renderOffline(fieldProbe({ id: 'l', type: 'lfo', rate: 0.13 }, 'value'), { sampleRate: RATE, seconds: 10 }));
+  assert.ok(Math.abs(crossingRate(slow, RATE) - 0.1) <= 0.05, 'a 0.13 Hz lfo does not cross zero once in 10 s');
+});
+
+test('randomWalk: stays in range, picks a new target every [a, b] seconds, glides with slew', () => {
+  const steps = clean(renderOffline(fieldProbe({ id: 'w', type: 'randomWalk', range: [0.2, 0.6], every: [0.5, 1], slew: 0 }, 'value'), { sampleRate: RATE, seconds: 10 }));
+  assert.ok(steps.every((v) => v >= 0.2 - 1e-6 && v <= 0.6 + 1e-6), 'a value outside [0.2, 0.6]');
+  const changes = [];
+  for (let i = 1; i < steps.length; i++) if (steps[i] !== steps[i - 1]) changes.push(i / RATE);
+  const gaps = changes.slice(1).map((t, k) => t - changes[k]);
+  assert.ok(changes.length >= 9, `only ${changes.length} target changes in 10 s`);
+  assert.ok(gaps.every((g) => g >= 0.5 - 1e-9 && g <= 1 + BLOCK_SECONDS + 1e-9), `a gap outside [0.5, 1] s: ${gaps}`);
+  assert.ok(Math.max(...gaps) - Math.min(...gaps) > 0.2, 'the intervals do not vary');
+  const glide = clean(renderOffline(fieldProbe({ id: 'w', type: 'randomWalk', range: [0.2, 0.6], every: [0.5, 1], slew: 0.5 }, 'value'), { sampleRate: RATE, seconds: 10 }));
+  let jump = 0;
+  for (let i = 1; i < glide.length; i++) jump = Math.max(jump, Math.abs(glide[i] - glide[i - 1]));
+  assert.ok(jump <= 0.4 * (1 - Math.exp(-BLOCK_SECONDS / 0.5)) + 1e-6, `slew 0.5 s still jumps ${jump} in one block`);
+  assert.ok(glide.reduce((m, v) => Math.max(m, v)) - glide.reduce((m, v) => Math.min(m, v)) > 0.1, 'a gliding walk does not move');
+});
+
+const hullWater = JSON.parse(readFileSync(new URL('./recipes/hull_water.json', import.meta.url), 'utf8'));
+const cityBed = JSON.parse(readFileSync(new URL('./recipes/city_bed.json', import.meta.url), 'utf8'));
+
+for (const [name, recipe, inputs] of [['hull_water', hullWater, { speed: 0.5 }], ['city_bed', cityBed, {}]]) test(`${name}: 10 s at 48 kHz is clean and bit-identical twice`, () => {
+  const a = clean(renderOffline(recipe, { sampleRate: RATE, seconds: 10, inputs }));
+  assert.deepEqual(renderOffline(recipe, { sampleRate: RATE, seconds: 10, inputs }), a);
+  assert.ok(rms(a) > 0.01, `${name} is silent`);
+});
+
+test('hull_water: louder and brighter with speed; at rest the lapping swells and fades (Leeway HullWater)', () => {
+  const at = (speed) => clean(renderOffline(hullWater, { sampleRate: RATE, seconds: 10, inputs: { speed } }));
+  const [rest, half, full] = [at(0), at(0.5), at(1)];
+  assert.ok(rms(rest) > 0.002, 'the lapping at rest is silent');
+  assert.ok(rms(rest) < rms(half) && rms(half) < rms(full), 'loudness does not grow with speed');
+  assert.ok(brightness(rest) < brightness(half) && brightness(half) < brightness(full), 'brightness does not grow with speed');
+  const seconds = Array.from({ length: 10 }, (_, s) => rms(rest, s * RATE, (s + 1) * RATE));
+  assert.ok(Math.max(...seconds) > 1.5 * Math.min(...seconds), `no swell at rest: ${seconds}`);
+});
+
+test('city_bed: a steady low bed, band-limited well below white noise (Leeway CityNoise bed)', () => {
+  const b = clean(renderOffline(cityBed, { sampleRate: RATE, seconds: 10 }));
+  const seconds = Array.from({ length: 10 }, (_, s) => rms(b, s * RATE, (s + 1) * RATE));
+  assert.ok(Math.max(...seconds) < 2 * Math.min(...seconds), `not steady: ${seconds}`);
+  assert.ok(brightness(b) < 0.5, `brightness ${brightness(b)}; white noise is about 1.41`);
+});
+
+test('randomWalk range and pulse hold at the edge of a double still give a finite value (clamped to +-1e6 when read)', () => {
+  for (const range of [[1e308, 1e308], [-1.7e308, 1.7e308]]) for (let seed = 1; seed <= 20; seed++) {
+    const b = renderOffline({ ...fieldProbe({ id: 'w', type: 'randomWalk', range, every: [0.1, 0.2], slew: 0.05 }, 'value'), seed }, { sampleRate: RATE, seconds: 1 });
+    assert.ok(b.every((v) => v !== 0 && Number.isFinite(v)), `range ${range}, seed ${seed}: a NaN field reads as 0`);
+  }
+  const held = renderOffline(fieldProbe({ id: 'p', type: 'pulse', hz: 100, hold: { g: [-1.7e308, 1.7e308] } }, 'g'), { sampleRate: RATE, seconds: 1 });
+  const tail = held.slice(RATE / 10);  // high - low overflowed to +Infinity, so every draw read +1e6
+  assert.ok(tail.some((v) => v < 0) && tail.some((v) => v > 0), 'pulse hold over [-1.7e308, 1.7e308] draws only one sign');
 });

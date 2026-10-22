@@ -5,6 +5,7 @@
 //   in       'one' (one node id) or 'list' (an array of ids, with optional per-input `gains`)
 //   sync     true: an optional `sync` names a pulse node that restarts the phase
 //   trigger  true: the output is a trigger train, so the node takes no `gain` and no `env`
+//   control  true: the node only publishes `fields`; its output is silent, it takes no `gain` and no `env`
 //   options  other keys the block reads (not exprs), checked by `check`
 //   check    (node, report(path, message)) validates the block's non-expr options
 //   fields   (node) -> extra `<id>.<field>` names the block publishes
@@ -17,6 +18,7 @@
 
 const TAU = 2 * Math.PI;
 const WAVES = ['sine', 'saw'];
+const isRange = (r) => Array.isArray(r) && r.length === 2 && r.every(Number.isFinite) && r[0] <= r[1];
 
 export const BLOCKS = Object.freeze({
   noise: {
@@ -123,7 +125,7 @@ export const BLOCKS = Object.freeze({
       for (const [name, range] of Object.entries(node.hold)) {
         if (!/^[A-Za-z_]\w*$/.test(name)) report(`hold.${name}`, 'is not a valid name');
         else if (Object.hasOwn(BLOCKS.pulse.params, name)) report(`hold.${name}`, 'clashes with a parameter name');
-        if (!Array.isArray(range) || range.length !== 2 || !range.every(Number.isFinite) || range[0] > range[1]) report(`hold.${name}`, 'must be [low, high], two numbers with low <= high');
+        if (!isRange(range)) report(`hold.${name}`, 'must be [low, high], two numbers with low <= high');
       }
     },
     fields: (node) => Object.keys(node.hold ?? {}),
@@ -142,9 +144,63 @@ export const BLOCKS = Object.freeze({
             if (phase < 1) continue;
             phase -= 1 + jitter * rng.next();
             out[i] = 1;
-            for (let j = 0; j < fields.length; j++) fields[j] = lows[j] + (highs[j] - lows[j]) * rng.unit();
+            for (let j = 0; j < fields.length; j++) { const u = rng.unit(); fields[j] = lows[j] * (1 - u) + highs[j] * u; }  // high - low may overflow
           }
           state[0] = phase;
+        },
+      };
+    },
+  },
+
+  lfo: {  // a slow sine read by other nodes' exprs, as Leeway's hull-water swell; control rate
+    params: { rate: 1 },
+    control: true,
+    options: ['harmonic'],
+    check(node, report) {
+      if (node.harmonic !== undefined && !(Number.isInteger(node.harmonic) && node.harmonic >= 1)) report('harmonic', 'must be a whole number from 1 up');
+    },
+    fields: (node) => (node.harmonic === undefined ? ['value'] : ['value', 'harmonic']),
+    create(node, { sampleRate }) {
+      const n = node.harmonic ?? 0;
+      const fields = new Float64Array(n ? 2 : 1);  // [sin(phase), sin(n * phase)]
+      const state = new Float64Array(1);  // [phase, in cycles]
+      return {
+        fields,
+        process(p, io, out) {  // p: [rate]
+          const phase = state[0];
+          fields[0] = Math.sin(TAU * phase);
+          if (n) fields[1] = Math.sin(TAU * n * phase);
+          state[0] = phase + p[0] * out.length / sampleRate;
+          state[0] -= Math.floor(state[0]);
+        },
+      };
+    },
+  },
+
+  randomWalk: {  // a level that heads for a new random target every `every` seconds, as Leeway's city traffic; control rate
+    params: { slew: 1 },
+    control: true,
+    options: ['range', 'every'],
+    check(node, report) {
+      if (node.range !== undefined && !isRange(node.range)) report('range', 'must be [low, high], two numbers with low <= high');
+      if (node.every !== undefined && !(isRange(node.every) && node.every[0] >= 0)) report('every', 'must be [low, high] seconds, two numbers with 0 <= low <= high');
+    },
+    fields: () => ['value'],
+    create(node, { sampleRate, rng }) {
+      const [lo, hi] = node.range ?? [0, 1], [soonest, latest] = node.every ?? [1, 4];
+      const fields = Float64Array.of(lo / 2 + hi / 2);  // [value]; starts mid-range. Halves first: lo + hi may overflow
+      const state = Float64Array.of(fields[0], 0);  // [target, seconds until the next target]
+      return {
+        fields,
+        process(p, io, out) {  // p: [slew], the smoothing time constant in seconds
+          const dt = out.length / sampleRate;
+          if ((state[1] -= dt) <= 0) {
+            const u = rng.unit();
+            state[0] = lo * (1 - u) + hi * u;  // not lo + (hi - lo) * u: hi - lo may overflow
+            state[1] = soonest + (latest - soonest) * rng.unit();
+          }
+          const k = p[0] > 0 ? 1 - Math.exp(-dt / p[0]) : 1;
+          fields[0] = fields[0] * (1 - k) + state[0] * k;  // not value + (target - value) * k: target - value may overflow
         },
       };
     },

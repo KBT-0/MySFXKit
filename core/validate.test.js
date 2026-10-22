@@ -75,3 +75,24 @@ test('names like __proto__ and toString are plain names, not prototype lookups',
   assert.ok(Math.abs(Math.max(...b) - 0.25) < 0.01, `peak ${Math.max(...b)}, expected 0.25`);
   assert.throws(() => instance.setInput('valueOf', 1), /unknown input/);
 });
+
+test('validate: the bundled hull_water and city_bed are valid', () => {
+  for (const name of ['hull_water', 'city_bed']) {
+    const r = JSON.parse(readFileSync(new URL(`./recipes/${name}.json`, import.meta.url), 'utf8'));
+    assert.deepEqual(validateRecipe(r), { ok: true, errors: [] }, name);
+  }
+});
+
+test('validate: lfo and randomWalk options, fields, and no gain or env', () => {
+  const reading = (node, gain) => recipe([node, { id: 'out', type: 'osc', gain }]);
+  assert.deepEqual(errorsOf(reading({ id: 'l', type: 'lfo', rate: 0.13, harmonic: 3 }, 'l.value * l.harmonic')), []);
+  assert.match(errorsOf(reading({ id: 'l', type: 'lfo', harmonic: 1.5 }, 1))[0].message, /whole number from 1/);
+  assert.match(errorsOf(reading({ id: 'l', type: 'lfo', harmonic: 0 }, 1))[0].message, /whole number from 1/);
+  assert.match(errorsOf(reading({ id: 'l', type: 'lfo' }, 'l.harmonic'))[0].message, /a lfo node has rate, value$/);
+  assert.match(errorsOf(reading({ id: 'l', type: 'lfo', gain: 0.5 }, 1))[0].message, /unknown key for a lfo node/);
+  assert.deepEqual(errorsOf(reading({ id: 'w', type: 'randomWalk', range: [0.2, 1], every: [1.5, 4], slew: 1.25 }, 'w.value')), []);
+  assert.match(errorsOf(reading({ id: 'w', type: 'randomWalk', range: [1, 0.2] }, 1))[0].message, /low <= high/);
+  assert.match(errorsOf(reading({ id: 'w', type: 'randomWalk', every: [-1, 4] }, 1))[0].message, /0 <= low <= high/);
+  assert.match(errorsOf(reading({ id: 'w', type: 'randomWalk', every: 2 }, 1))[0].message, /\[low, high\] seconds/);
+  assert.match(errorsOf(reading({ id: 'w', type: 'randomWalk', env: { trigger: 'w', decay: 1 } }, 1))[0].message, /unknown key for a randomWalk node/);
+});

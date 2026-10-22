@@ -7,6 +7,8 @@ const NAME = /^[A-Za-z_]\w*$/;
 export const MAX_NODES = 1000;
 const TOP_KEYS = ['name', 'description', 'version', 'seed', 'inputs', 'params', 'nodes', 'out'];
 const isObject = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
+/** A trigger or control block: its output is not a sound, so it takes no `gain` and no `env`. */
+const bare = (def) => def.trigger || def.control;
 
 /**
  * Validates a recipe (parsed JSON). Returns `{ ok, errors }`; each error is
@@ -100,7 +102,7 @@ export function analyzeRecipe(recipe) {
   const typed = (id) => Object.hasOwn(BLOCKS, byId.get(id).node.type);
   const fieldsOf = (id) => {
     const def = BLOCKS[byId.get(id).node.type];
-    return [...(def.trigger ? [] : ['gain']), ...Object.keys(def.params), ...(def.fields?.(byId.get(id).node) ?? [])];
+    return [...(bare(def) ? [] : ['gain']), ...Object.keys(def.params), ...(def.fields?.(byId.get(id).node) ?? [])];
   };
 
   const planned = new Map();
@@ -109,7 +111,7 @@ export function analyzeRecipe(recipe) {
     const def = BLOCKS[node.type];
     const at = (key) => `nodes[${index}].${key}`;
     const deps = new Set(), refs = [];
-    const allowed = ['id', 'type', ...(def.trigger ? [] : ['gain', 'env']), ...Object.keys(def.params), ...(def.in ? ['in'] : []),
+    const allowed = ['id', 'type', ...(bare(def) ? [] : ['gain', 'env']), ...Object.keys(def.params), ...(def.in ? ['in'] : []),
       ...(def.in === 'list' ? ['gains'] : []), ...(def.sync ? ['sync'] : []), ...(def.options ?? [])];
     for (const key of Object.keys(node)) if (!allowed.includes(key)) report(id, at(key), `unknown key for a ${node.type} node`);
     def.check?.(node, (key, message) => report(id, at(key), message));
@@ -121,7 +123,7 @@ export function analyzeRecipe(recipe) {
       return value;
     };
     const exprs = {};
-    for (const [key, fallback] of Object.entries({ ...(def.trigger ? {} : { gain: 1 }), ...def.params })) exprs[key] = parse(node[key] ?? fallback, id, at(key), refs);
+    for (const [key, fallback] of Object.entries({ ...(bare(def) ? {} : { gain: 1 }), ...def.params })) exprs[key] = parse(node[key] ?? fallback, id, at(key), refs);
 
     let input = null, gains = null;
     if (def.in === 'one') input = nodeId(node.in, 'in');

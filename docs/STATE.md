@@ -16,6 +16,11 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   (1) `lfo` + `randomWalk`, hull water and city bed; (2) `randomTrigger` + attack/release
   envelope, horn and ferry; (3) `trigger` event input, hull impact; (4) `sequence`/`choose`,
   gull. A fifth task in `playground/` then adds the examples and an impact trigger button.
+  Part 1 committed (Opus 5.5 worker sub-agent, high; review round 1 Accept with Manual
+  Checks with one Medium fixed by the author, round 2 Accept, both Opus 5.5 high, fresh).
+  Manual check owed to Kemal: listen to `hull_water` at speed 0, 0.5 and 1, and to
+  `city_bed`, against Leeway in game (possible once the examples are in the dropdown). At
+  speed 0 the water is very quiet (RMS 0.0065 against 0.12 at full speed), as in Leeway.
   GitHub Pages is live at `https://kbt-0.github.io/MySFXKit/playground/`; pushes rebuild it.
 - SFX-3 (Claude Code, Fable 5.1 lead; Opus 5.5 worker sub-agent, high effort, 2026-10-22):
   playground v0 in `playground/` (paste a recipe, fence stripping, schema errors, Play, one
@@ -88,6 +93,9 @@ here; that meaning is a contract the gate does not check)
   5. `scripts/boundary_checks.sh`: two DORMANT checks (no `eval` in `playground/`, no adapter
      import in `core/`), written before the §5.1 decision; their folder names follow brief §5.
 - The brief's open questions §9 (lecture length, students' computers, name, licence, Steam cases).
+  Partial answer (Kemal, 2026-10-22, lead session 3): length "bilmiyorum henüz ama uzun"
+  (not known yet, but long); laptops "Bilmiyorum, ikisine de uyacak" (unknown; the SFX-4
+  deck must work with and without student laptops, so a laptop exercise block is optional).
 
 ## Known issues / watch out
 

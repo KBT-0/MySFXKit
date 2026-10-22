@@ -34,3 +34,20 @@ export function pulseRate(b, sampleRate) {
   const t = onsets(b, sampleRate);
   return t.length < 2 ? 0 : (t.length - 1) / (t.at(-1) - t[0]);
 }
+
+/**
+ * Brightness: the RMS of the sample-to-sample difference over the RMS. Rises with the share of
+ * high frequencies; white noise gives about 1.41, a sine of frequency f about 2 pi f / sampleRate.
+ */
+export function brightness(b) {
+  let d = 0;
+  for (let i = 1; i < b.length; i++) d += (b[i] - b[i - 1]) ** 2;
+  return Math.sqrt(d / Math.max(b.length - 1, 1)) / Math.max(rms(b), 1e-12);
+}
+
+/** Upward zero crossings per second. */
+export function crossingRate(b, sampleRate) {
+  let n = 0;
+  for (let i = 1; i < b.length; i++) if (b[i - 1] < 0 && b[i] >= 0) n++;
+  return n * sampleRate / b.length;
+}

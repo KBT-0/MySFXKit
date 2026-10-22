@@ -41,13 +41,22 @@ loads may still allocate, and `compileRecipe` and `reset` allocate.
 | `nodes` | `[{ id, type, ... }]`: the block graph (table below); order does not matter, cycles are rejected |
 | `out` | the id of the output node; missing, the node with id `out` |
 
-Every node parameter is a number or an expr string. Every node except a `pulse` also takes
+Every node parameter is a number or an expr string. Every node except a `pulse`, an `lfo` or a
+`randomWalk` also takes
 `gain` (default 1) and `env: { trigger: <pulse id>, decay: <seconds> }`, an exponential decay
 `exp(-t / decay)` restarted at each pulse and silent before the first. Unknown keys are errors.
 
 The diesel (`recipes/diesel.json`) is a port of Leeway's `Diesel` (`engine/audio/voices.hpp`)
 with Leeway's numbers: firing 4.5 Hz at idle to 13 Hz at full throttle, glide 1/1.2 s, period
 jitter ±3 %, per-pulse gain 0.7–1.0, and Leeway's `engine` 0.35 and `master` 0.8 into `tanh`.
+
+The hull water (`recipes/hull_water.json`) is a port of Leeway's `HullWater`, input `speed`
+0..1: a 0.13 Hz `lfo` with a 3x harmonic on the lapping, a wash whose cutoff and
+`pow(speed, 1.3)` gain grow with speed, Leeway's `water` 0.45 and `master` 0.8 into `tanh`.
+
+The city bed (`recipes/city_bed.json`) is Leeway's `CityNoise` bed layer (rumble and traffic,
+no horns or ferry) for one listener distance, with no inputs: a `randomWalk` traffic level.
+The per-building distance sum and stereo placement stay game or adapter code.
 
 ```json
 {
@@ -84,7 +93,8 @@ jitter ±3 %, per-pulse gain 0.7–1.0, and Leeway's `engine` 0.35 and `master` 
 
 A param reads inputs and earlier params. A node reads inputs, params and other nodes' fields;
 each field it reads orders that node first. A node's fields are its parameters (`gain`
-included) and, for a pulse, its `hold` names. A result that is not finite (a division by zero)
+included), for a pulse its `hold` names, for an `lfo` `value` (and `harmonic`), for a
+`randomWalk` `value`. A result that is not finite (a division by zero)
 counts as 0, and every result is clamped to ±1e6; so is every node's output sample, so NaN and
 Infinity never reach the output. An expr is at most 1000 characters. A parse error names the
 node, the parameter and the expr text. Exprs are parsed into a tree and compiled to a stack
@@ -101,6 +111,8 @@ program of fixed opcodes; nothing is ever run as code.
 | `shape` | `in`, `drive` (1) | `tanh(drive * in)`, a soft clip into (-1, 1) |
 | `mix` | `in`: a list of ids, `gains`: one expr per input (all 1) | the weighted sum |
 | `pulse` | `hz` (1), `jitter` (0, at most 0.5), `hold: { name: [lo, hi] }` | one-sample triggers; each period is `(1 ± jitter) / hz`; each pulse draws every `hold` value uniformly from [lo, hi], readable as `<id>.<name>` |
+| `lfo` | `rate` Hz (1), `harmonic`: a whole number n >= 1 (optional) | silent; publishes `<id>.value` = sin(2π · phase) and, with `harmonic`, `<id>.harmonic` = sin(2π · n · phase), once per control block; the phase starts at 0 |
+| `randomWalk` | `range: [lo, hi]` ([0, 1]), `every: [a, b]` seconds ([1, 4]), `slew` seconds (1) | silent; publishes `<id>.value`, which starts mid-range and glides (time constant `slew`; 0 jumps) toward a target drawn uniformly from `range`; a new target and a new wait drawn from `every` when the wait runs out, the first at once; once per control block |
 
 ## Tests
 

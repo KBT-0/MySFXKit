@@ -7,7 +7,8 @@ import { compileRecipe } from './index.js';
 const RATE = 48000;
 const BUDGET = 32 * 1024;  // bytes over 3750 blocks: one 16-byte boxed number per block (60 KB) exceeds it
 const CORE = new URL('.', import.meta.url).href;
-const diesel = JSON.parse(readFileSync(new URL('./recipes/diesel.json', import.meta.url), 'utf8'));
+const load = (name) => JSON.parse(readFileSync(new URL(`./recipes/${name}.json`, import.meta.url), 'utf8'));
+const diesel = load('diesel');
 // The blocks the diesel does not use: a saw osc, a bandpass and a lowpass of it.
 const others = {
   name: 'others', version: 0, seed: 5,
@@ -40,7 +41,7 @@ async function coreAllocations(work) {
   }
 }
 
-for (const [name, recipe, inputs] of [['diesel', diesel, { throttle: 0.5 }], ['others', others, {}]]) test(`${name}: render allocates nothing per control block once optimized (an AudioWorklet calls it every 128 frames)`, async () => {
+for (const [name, recipe, inputs] of [['diesel', diesel, { throttle: 0.5 }], ['others', others, {}], ['hull_water', load('hull_water'), { speed: 0.5 }], ['city_bed', load('city_bed'), {}]]) test(`${name}: render allocates nothing per control block once optimized (an AudioWorklet calls it every 128 frames)`, async () => {
   const instance = compileRecipe(recipe, { sampleRate: RATE });
   for (const [input, value] of Object.entries(inputs)) instance.setInput(input, value);
   const out = new Float32Array(128);
