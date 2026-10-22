@@ -39,10 +39,6 @@ here; that meaning is a contract the gate does not check)
 - The §5.1 format decision (A / B / C): Kemal decides after reading the evaluation.
 - The brief's open questions §9 (lecture length, students' computers, name, licence, Steam cases).
 - Making `KBT-0/MySFXKit` public: Kemal's decision, asked before the lecture.
-- Remote and push: the kit's `guard_destructive_git.py` refuses `git remote add` from an
-  agent. Kemal runs, from the project root:
-  `git remote add origin git@github.com:KBT-0/MySFXKit.git` then `git push -u origin main`.
-  The private repository `KBT-0/MySFXKit` exists (created with `gh`, 2026-10-22).
 
 ## Known issues / watch out
 
