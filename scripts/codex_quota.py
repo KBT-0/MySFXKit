@@ -1,0 +1,147 @@
+"""Read an account quota snapshot through the existing Codex CLI, without starting a turn."""
+from datetime import datetime, timezone
+import json
+import math
+import os
+from pathlib import Path
+import selectors
+import subprocess
+import time
+from agent_process import POSIX, block_cancels, drain, launch, restore_mask, stop_group, take
+
+
+def sanitize(result):
+    """Retain quota/plan fields only, never login tokens or account identity."""
+    buckets = result.get("rateLimitsByLimitId")
+    if not isinstance(buckets, dict) or not buckets:
+        single = result.get("rateLimits")
+        buckets = {single.get("limitId") or "codex": single} if isinstance(single, dict) else {}
+    safe = {}
+    for key, value in buckets.items():
+        if not isinstance(value, dict):
+            continue
+        plan = value.get("planType")
+        item = {"plan_type": plan if isinstance(plan, str) else None, "primary": None, "secondary": None}
+        for window in ("primary", "secondary"):
+            raw = value.get(window)
+            if not isinstance(raw, dict):
+                continue
+            percent = raw.get("usedPercent")
+            if (isinstance(percent, (int, float)) and not isinstance(percent, bool)
+                    and math.isfinite(percent) and percent >= 0):  # above 100 is exhausted, kept
+                minutes, resets = raw.get("windowDurationMins"), raw.get("resetsAt")
+                item[window] = {"used_percent": percent,
+                                "window_minutes": minutes if type(minutes) is int and minutes > 0 else None,
+                                "resets_at": resets if type(resets) is int and resets >= 0 else None}
+        # Named fields only, since the app-server's credits shape is not verified: a balance
+        # (a number, or a numeric string) and the hasCredits and unlimited flags.
+        credits = value.get("credits")
+        if isinstance(credits, dict):
+            kept = {name: credits[name] for name in ("hasCredits", "unlimited")
+                    if isinstance(credits.get(name), bool)}
+            balance = credits.get("balance")
+            try:
+                balance = float(balance) if isinstance(balance, (str, int, float)) and not isinstance(balance, bool) else None
+            except ValueError:
+                balance = None
+            if balance is not None and math.isfinite(balance):
+                kept["balance"] = balance
+            item["credits"] = kept
+        safe[str(key)] = item
+    return safe
+
+
+def has_reading(buckets):
+    """True when a bucket holds a window percent or a credits balance; flags alone
+    ({"hasCredits": false}) read nothing."""
+    return any(item["primary"] or item["secondary"] or "balance" in item.get("credits", {})
+               for item in buckets.values())
+
+
+# Five seconds and 1,000,000 bytes are the owner's choice of telemetry safeguards,
+# not vendor limits (KARARLAR B03 inv2#62).
+def snapshot(cli: str, repo: Path, timeout: float = 5) -> dict:
+    """Optional telemetry may fail; it must not block or authorize model work."""
+    observed = datetime.now(timezone.utc).isoformat()
+    proc = None
+    try:
+        deadline = time.monotonic() + timeout
+        # Blocked across Popen, as the reviewer's launch is: the closing read runs under a
+        # raising cancel handler, and a cancel after the app-server existed but before Popen
+        # returned left no handle to kill. A pending cancel is raised on unblock, handle kept.
+        mask = block_cancels()
+        try:
+            proc = launch([cli, "app-server", "--stdio"], mask, cwd=repo,
+                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        finally:
+            restore_mask(mask)
+        def send(value):
+            proc.stdin.write((json.dumps(value) + "\n").encode())
+            proc.stdin.flush()
+        send({"method": "initialize", "id": 1,
+              "params": {"clientInfo": {"name": "myagentkit-usage", "version": "0.1.0"}}})
+        buffer = b""
+        total = 0
+        # Native Windows: select() takes sockets only, so a thread reads the pipe (drain()).
+        chunks = None if POSIX else drain({"stdout": proc.stdout})
+        with selectors.DefaultSelector() as selector:
+            if POSIX:
+                selector.register(proc.stdout, selectors.EVENT_READ)
+            while time.monotonic() < deadline:
+                if POSIX:
+                    if not selector.select(max(0, deadline - time.monotonic())):
+                        break
+                    chunk = os.read(proc.stdout.fileno(), 65536)
+                else:
+                    got = take(chunks, max(0, deadline - time.monotonic()))
+                    if not got:
+                        break
+                    # Data read before EOF is parsed first; EOF is handed back on the next pass.
+                    if got[-1][1] == b"" and len(got) > 1:
+                        chunks.put(got.pop())
+                    chunk = b"".join(data for _, data in got)
+                if not chunk:
+                    raise ValueError("quota reader exited without its response")
+                buffer += chunk
+                total += len(chunk)
+                if total > 1_000_000:
+                    raise ValueError("quota response exceeds capture limit")
+                while b"\n" in buffer:
+                    line, buffer = buffer.split(b"\n", 1)
+                    value = json.loads(line)
+                    if not isinstance(value, dict):
+                        continue
+                    if value.get("id") not in (1, 2):
+                        continue
+                    if "error" in value:
+                        raise ValueError("quota endpoint unavailable: " + str(value["error"]))
+                    if value["id"] == 1:
+                        send({"method": "initialized", "params": {}})
+                        send({"method": "account/rateLimits/read", "id": 2})
+                    elif isinstance(value.get("result"), dict):
+                        buckets = sanitize(value["result"])
+                        return {"status": "available" if has_reading(buckets) else "unavailable",
+                                "observed_at": observed, "buckets": buckets,
+                                "source": "codex account/rateLimits/read"}
+            raise ValueError("quota snapshot timed out")
+    except (OSError, ValueError) as error:
+        return {"status": "unavailable", "observed_at": observed, "error": str(error), "buckets": {}}
+    finally:
+        if proc is not None:
+            # Blocked here too: a cancel raised before the kill left the group running.
+            mask = block_cancels()
+            try:
+                stop_group(proc, proc.pid)
+                # Never raising: a write that met the exited reader left its bytes buffered,
+                # and close() flushed them again and raised BrokenPipeError out of here.
+                for stream in (proc.stdin, proc.stdout):
+                    try:
+                        stream.close()
+                    except OSError:
+                        pass
+            finally:
+                restore_mask(mask)
+
+
+if __name__ == "__main__":
+    print(json.dumps(snapshot(os.environ.get("REVIEW_CLI_BIN", "codex"), Path.cwd()), indent=2))

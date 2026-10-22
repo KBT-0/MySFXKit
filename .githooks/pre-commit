@@ -1,0 +1,86 @@
+#!/usr/bin/env sh
+# KIT-OWNED: do not edit locally; change it in the kit and re-sync.
+# Runs the project gate before every commit, so passing it never depends on an agent (or a
+# human) remembering to. CI runs the same script — one definition of "green".
+#
+# That is not a promise that local and CI always agree: same script, different machine.
+# A file mode, a missing tool or a locale can differ (docs/GOTCHAS.md). Check the pipeline
+# after pushing rather than inferring it from a local pass.
+#
+# Enable once per clone:  git config core.hooksPath .githooks   (docs/DEV_SETUP.md)
+# WIP escape hatch:       git commit --no-verify
+#   That hatch belongs to the owner. Agents must NOT use it (AGENTS.md); in the Claude Code
+#   overlay a PreToolUse hook (.claude/hooks/guard_destructive_git.py) refuses it to them.
+#
+# A gate wired into git is the only kind that survives: one that depends on discipline
+# erodes the first time someone is in a hurry.
+# A hook of the project's own (husky, lefthook, a script of its own) lives beside this
+# one as pre-commit.project, project-owned, and runs FIRST with git's arguments: its failure
+# is the commit's failure, and this hook still runs after it. No other hooks path.
+project_hook="$(dirname -- "$0")/pre-commit.project"
+# git passes pre-commit no arguments; --merge is this kit's own (from pre-merge-commit). A
+# clean merge runs pre-commit.project too, after pre-merge-commit.project, as git's own
+# pre-merge-commit runs pre-commit (githooks(5); #153, owner decision 60).
+# A hook without a #! line is refused: Git for Windows never runs one, chmod +x or not, and
+# the documented one-line form was skipped in silence, so the project's own check never ran
+# (#165). One with a #! line and no execute bit is still skipped: chmod -x switches it off.
+if [ -x "$project_hook" ]; then "$project_hook" || exit $?
+elif [ -f "$project_hook" ] && case $(head -n 1 -- "$project_hook") in '#!'*) false ;; esac; then
+  printf '%s\n' "pre-commit: $project_hook has no #! line, and Git for Windows never runs such a file. Commit refused. Start it with #!/bin/sh and chmod +x it, or delete it." >&2; exit 1
+fi
+set -u
+
+root=$(git rev-parse --show-toplevel) || exit 1
+CDPATH= cd -- "$root" || exit 1
+
+# Git runs this hook before it decides there is anything to commit: `commit -a` on a clean
+# tree, a forgotten `git add` and a message-only amend each ran the whole gate, then git said
+# "nothing to commit" (#232). When the index equals HEAD the commit records HEAD's tree, which
+# the gate vouched for when HEAD was committed. A merge always runs it; a first commit too.
+# --merge is the only sign of a clean merge: git writes no MERGE_HEAD before pre-merge-commit
+# (git 2.47). Submodules are never ignored: diff.ignoreSubmodules=all hid a staged bump.
+if [ "${1:-}" != --merge ] && ! git rev-parse -q --verify MERGE_HEAD >/dev/null &&
+   git diff --cached --quiet --ignore-submodules=none HEAD -- 2>/dev/null; then
+  echo "pre-commit: nothing staged differs from HEAD, so the gate did not run: this commit records HEAD's tree." >&2
+  exit 0
+fi
+
+# Fast gate only, never an opt-in gate. Everything slow stays out of the commit path: a
+# project's opt-in gates (an engine running in batchmode, an integration suite) cost minutes
+# and sometimes need a live install.
+# A commit hook people start bypassing is worse than no commit hook, and slowness is what
+# makes them start.
+#
+# BEING OUT OF THE COMMIT PATH IS NOT BEING OPTIONAL, and this comment used to imply it was.
+# Each of those gates has its own binding trigger written down where it is defined — an
+# engine gate typically at task completion ("this work is not done until its tests pass").
+# Honour the trigger the gate states.
+#
+# Do not assume CI covers them either: the CI this kit ships runs `./scripts/check.sh` and
+# nothing else, so an opt-in gate runs in CI only if the project added it there deliberately.
+# Check before believing it.
+#
+# --for-commit lets the gate skip the build when the staged change is documentation only;
+# check.sh decides that from the index. pre-merge-commit passes --merge and gets the full
+# gate. A check.sh from before this option (a project not yet upgraded) gets no flag.
+if [ "${1:-}" != --merge ] && grep -q -- '--for-commit)' scripts/check.sh; then
+  ./scripts/check.sh --for-commit
+else
+  ./scripts/check.sh
+fi
+status=$?
+# The tree this commit records, as gated: check.sh's documentation-only path trusts only a HEAD
+# whose tree it finds here. A rebase, cherry-pick or revert runs no hook (#115), and the first
+# documentation-only commit after one builds. One file per worktree, overwritten.
+if [ "$status" -eq 0 ]; then
+  gated_tree=$(git write-tree) && printf '%s\n' "$gated_tree" > "$(git rev-parse --git-path check-gated-tree)"
+  exit 0
+fi
+# 75: another gate run held the lock past GATE_LOCK_WAIT. Nothing was checked, so the commit
+# stays blocked, but calling that a failure sends someone hunting for a defect that is not there.
+if [ "$status" -eq 75 ]; then
+  echo "pre-commit: check.sh did NOT RUN (another gate run holds the lock); commit blocked. Commit again when it finishes." >&2
+  exit 1
+fi
+echo "pre-commit: check.sh FAILED — commit aborted. Fix the failure. Only the owner bypasses this gate." >&2
+exit 1

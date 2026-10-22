@@ -1,0 +1,229 @@
+#!/usr/bin/env sh
+# KIT-OWNED: do not edit locally; change it in the kit and re-sync.
+# Show worker sessions: ONE terminal window, one tab per named tmux session.
+#
+# Usage: show_workers.sh [--print] NAME [NAME...]
+#   --print  print the exact command it would run, and run nothing.
+#
+# Why: a worker session nobody can see can sit behind a permission prompt, the folder-trust
+# dialog or a question for as long as nobody looks. spawn_worker.sh calls this for every
+# session it starts; a lead that starts several with --batch calls it once with all their
+# names, so they open together instead of one window at a time.
+#
+# What it does, in order (nothing opens unless every step before it passed):
+#   - Refuses a session name outside [A-Za-z0-9_-], by name: the name crosses into a Windows
+#     command line or an AppleScript string, where `;` starts another Windows Terminal
+#     subcommand and a quote ends a string. tmux itself accepts more.
+#   - A Claude Code background session (.myagentkit/workers/NAME.host bg) opens nothing: it
+#     prints `claude attach ID` (NAME.id) for the owner to run, because attach needs a terminal
+#     (docs/research/worker-orchestration-spike-posix.md, 7); `claude agents` lists them all. One
+#     spawned on the other host (native Windows or WSL, as list_workers.sh --row tells) is attached
+#     there: this host's list cannot see it. The steps below are for the rest; with none left it
+#     exits 0 there.
+#   - Refuses, by name, a session that does not exist (exact match, `-t =NAME`).
+#   - Skips a session that already has a client attached, with a line: running it twice never
+#     opens a second tab.
+#   - Opens the rest, by the first backend that fits:
+#       WSL + Windows Terminal: `wt.exe -w 0 new-tab ...`, one tab per session in the window
+#         used last (`-w 0` is the most recently used window: learn.microsoft.com/windows/
+#         terminal/command-line-arguments), which is the lead's as long as the owner did not
+#         switch windows during the spawn: a window named after the project opened a
+#         second window beside it, which the owner did not want. Run from the drive's root: from a WSL path wt.exe warns about a UNC
+#         working directory. KIT_WT names the launcher instead of the wt.exe found on PATH or
+#         under /mnt/c/Users; the kit's tests point it at a stub, because under WSL any file
+#         named *.exe is handed to Windows, and a test double of that name opened dialogs.
+#       macOS: iTerm2 (when the lead runs in it, or it is installed and the lead does not run
+#         in Terminal.app): a new window with one tab per session. Terminal.app: one WINDOW
+#         per session, because adding a tab there needs accessibility permission.
+#       a Linux desktop (DISPLAY or WAYLAND_DISPLAY set): the first of $TERMINAL and
+#         x-terminal-emulator found on PATH, one window per session (`TERM -e tmux attach -t
+#         =NAME`), started in the background: xterm and its kind run until the window closes.
+#       anything else (a headless or SSH host): opens nothing and prints `attach by hand:
+#         tmux attach -t NAME`.
+#   - Proves it: a session counts as shown only once `tmux list-clients` lists a client for
+#     it within 8 seconds; for any other it prints the attach line. Every launch is bounded
+#     (5 seconds, then SIGTERM, then SIGKILL 2 seconds later: the stop pattern of `timeout -k`
+#     and `docker stop`). The 8, 5 and 2 seconds are bounds, not measurements (owner's choice).
+#     Closing a tab detaches; the session keeps running.
+# Exit status: 1 for a refused or missing session (nothing opened), 0 otherwise, including
+# when no terminal could be opened (the lines say so): a view that fails never fails the
+# spawn that asked for it (a kit design principle, not a sourced rule).
+set -eu
+
+say() { printf 'show_workers: %s\n' "$1" | LC_ALL=C tr '\001-\011\013-\037\177' '?'; }
+die() { say "$1" >&2; exit 1; }
+# Quote one value for a POSIX shell, as spawn_worker.sh does.
+q() { set -- "$(printf '%sx' "$1" | sed "s/'/'\\\\''/g")"; printf "'%s'" "${1%x}"; }
+
+print=""
+[ "${1-}" != --print ] || { print=1; shift; }
+[ $# -ge 1 ] || { sed -n '3,6p' "$0"; exit 2; }
+for n in "$@"; do
+  case $n in
+    ""|*[!A-Za-z0-9_-]*) die "refused session name '$n': only letters, digits, - and _ are opened here (it would cross into a Windows command line or an AppleScript string); attach by hand" ;;
+  esac
+done
+# A Claude Code background session (.myagentkit/workers/NAME.host bg) has no tab to open: its
+# attach line is printed for the owner, never run (`claude attach` needs a terminal).
+wdir=$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)/.myagentkit/workers
+tabs=""
+for n in "$@"; do
+  if [ "$(cat -- "$wdir/$n.host" 2>/dev/null)" = bg ]; then
+    id=$(cat -- "$wdir/$n.id" 2>/dev/null) || id=""
+    row=$(sh "$(dirname -- "$0")/list_workers.sh" --row "$n" 2>/dev/null) || row=""
+    case $row in
+      "elsewhere	"*) say "$n runs in the background on ${row#*	}, whose sessions this host cannot see: claude attach ${id:-ID} there   (nothing opened)" ;;
+      *) say "$n runs in the background: claude attach ${id:-ID}   (claude agents lists every session; nothing opened)" ;;
+    esac
+  else
+    tabs="$tabs $n"
+  fi
+done
+[ -n "$tabs" ] || exit 0
+# shellcheck disable=SC2086 # names are [A-Za-z0-9_-]: split on purpose
+set -- $tabs
+command -v tmux >/dev/null || die "tmux is not installed"
+missing=""
+for n in "$@"; do tmux has-session -t "=$n" 2>/dev/null || missing="$missing $n"; done
+[ -z "$missing" ] || die "no tmux session named:$missing; nothing opened"
+
+show=""
+for n in "$@"; do
+  case " $show " in *" $n "*) continue ;; esac
+  if [ -n "$(tmux list-clients -t "=$n" 2>/dev/null)" ]; then
+    say "$n already has a terminal attached; not opened again"
+  else
+    show="$show $n"
+  fi
+done
+[ -n "$show" ] || exit 0
+
+by_hand() {
+  [ -z "${1-}" ] || say "$1"
+  for n in $show; do say "attach by hand: tmux attach -t $n"; done
+  exit 0
+}
+
+tmux_bin=$(command -v tmux)
+case $tmux_bin in
+  /*) case $tmux_bin in *[!A-Za-z0-9._/-]*) by_hand "tmux's path has characters this script does not pass on: $tmux_bin" ;; esac ;;
+  *) by_hand "tmux is not a program file here ($tmux_bin)" ;;
+esac
+
+# Run DIR CMD... detached from our output, bounded; or print it with --print.
+launch() {
+  dir=$1; shift
+  if [ -n "$print" ]; then
+    line="cd $(q "$dir") &&"
+    for a in "$@"; do line="$line $(q "$a")"; done
+    printf '%s\n' "$line" | LC_ALL=C tr '\001-\011\013-\037\177' '?'
+    exit 0
+  fi
+  log=$(mktemp) || by_hand "cannot make a temporary file"
+  ( CDPATH= cd -- "$dir" && exec "$@" ) >"$log" 2>&1 </dev/null &
+  pid=$!
+  # SIGTERM, then SIGKILL 2 s later: a launcher that ignored the one SIGTERM hung the spawn.
+  ( sleep 5; kill "$pid"; sleep 2; kill -9 "$pid" ) >/dev/null 2>&1 </dev/null &
+  dog=$!
+  rc=0; wait "$pid" || rc=$?
+  kill "$dog" 2>/dev/null || true
+  out=$(head -n 1 "$log"); rm -f "$log"
+  case $rc:$out in
+    0:*) ;;
+    *"Exec format error"*) by_hand "$1 failed with \"Exec format error\": WSL interop is down (wsl --shutdown from Windows restarts it)" ;;
+    143:*|137:*) by_hand "$1 did not return within 5 s (on macOS it may be asking to allow automation)" ;;
+    *) by_hand "$1 failed (exit $rc): $out" ;;
+  esac
+}
+
+wsl_wt() {
+  wt=${KIT_WT:-$(command -v wt.exe 2>/dev/null || true)}
+  if [ -z "$wt" ]; then
+    for f in /mnt/c/Users/*/AppData/Local/Microsoft/WindowsApps/wt.exe; do
+      [ -e "$f" ] || continue
+      [ -z "$wt" ] || by_hand "several wt.exe found under /mnt/c/Users; put the right one on PATH"
+      wt=$f
+    done
+  fi
+  [ -n "$wt" ] || by_hand "WSL without Windows Terminal (no wt.exe on PATH or under /mnt/c/Users)"
+  case $WSL_DISTRO_NAME in
+    *[!A-Za-z0-9._-]*) by_hand "the WSL distribution's name has characters this script does not pass on" ;;
+  esac
+  case $wt in /mnt/?/*) dir=${wt%"${wt#/mnt/?}"} ;; *) dir=${wt%/*} ;; esac
+  set -- "$wt" -w 0
+  sep=""
+  for n in $show; do
+    [ -z "$sep" ] || set -- "$@" "$sep"
+    sep=";"
+    # --exec: no login shell in between, whose syntax (zsh expands `=NAME`) is not ours.
+    set -- "$@" new-tab --title "$n" wsl.exe -d "$WSL_DISTRO_NAME" --exec "$tmux_bin" attach -t "=$n"
+  done
+  launch "$dir" "$@"
+}
+
+# One AppleScript string: the command a new shell runs, with " and \ escaped.
+as_cmd() { printf '"%s"' "$(printf '%s' "exec $(q "$tmux_bin") attach -t $(q "=$1")" | sed 's/[\\"]/\\&/g')"; }
+
+iterm() {
+  set -- osascript -e 'tell application "iTerm"' -e 'activate' -e 'set w to (create window with default profile)'
+  first=1
+  for n in $show; do
+    [ -n "$first" ] || set -- "$@" -e 'tell w to create tab with default profile'
+    first=""
+    set -- "$@" -e "tell current session of w to write text $(as_cmd "$n")"
+  done
+  launch / "$@" -e 'end tell'
+}
+
+terminal() {
+  say "Terminal.app opens one window per session: adding a tab needs accessibility permission"
+  set -- osascript -e 'tell application "Terminal"' -e 'activate'
+  for n in $show; do set -- "$@" -e "do script $(as_cmd "$n")"; done
+  launch / "$@" -e 'end tell'
+}
+
+# The first of $TERMINAL and x-terminal-emulator on PATH; none prints nothing.
+x_terminal() {
+  for t in "${TERMINAL-}" x-terminal-emulator; do
+    [ -n "$t" ] && command -v "$t" 2>/dev/null && return 0
+  done
+  return 1
+}
+
+# One window per session from one bounded launch: the shell that starts them returns at once.
+x_term() {
+  set -- sh -c 't=$1 x=$2; shift 2; for n in "$@"; do "$t" -e "$x" attach -t "=$n" >/dev/null 2>&1 </dev/null & done' \
+    sh "$1" "$tmux_bin"
+  for n in $show; do set -- "$@" "$n"; done
+  launch / "$@"
+}
+
+if [ -n "${WSL_DISTRO_NAME-}" ]; then
+  wsl_wt
+elif [ "$(uname -s)" = Darwin ] && command -v osascript >/dev/null; then
+  case ${TERM_PROGRAM-} in
+    iTerm.app) iterm ;;
+    Apple_Terminal) terminal ;;
+    *) if [ -d /Applications/iTerm.app ]; then iterm; else terminal; fi ;;
+  esac
+elif [ -n "${DISPLAY-}${WAYLAND_DISPLAY-}" ] && term=$(x_terminal); then
+  x_term "$term"
+else
+  by_hand "no supported terminal here (WSL with Windows Terminal, macOS, or a Linux desktop with \$TERMINAL or x-terminal-emulator on PATH)"
+fi
+
+# Shown only once a client is attached: the launcher returning proves nothing.
+pending=$show; i=0
+while :; do
+  left=""
+  for n in $pending; do [ -n "$(tmux list-clients -t "=$n" 2>/dev/null)" ] || left="$left $n"; done
+  pending=$left
+  [ -n "$pending" ] && [ "$i" -lt 8 ] || break
+  i=$((i + 1)); sleep 1
+done
+for n in $show; do
+  case " $pending " in
+    *" $n "*) say "no terminal attached to $n within 8 s; attach by hand: tmux attach -t $n" ;;
+    *) say "shown: $n" ;;
+  esac
+done

@@ -1,0 +1,62 @@
+# MySFXKit — repository root .gitignore
+#
+# READ THIS BEFORE EDITING: git applies the LAST matching rule. A broad pattern written
+# after a re-include silently re-ignores the files you just rescued, and the file reads
+# top-to-bottom while behaving bottom-to-top. Any re-include block therefore stays at the
+# very END of this file. Verify a specific path with `git check-ignore -v <path>`, which
+# names the winning rule and its line number, instead of reading and guessing.
+# (docs/GOTCHAS.md)
+
+########################################
+# OS / editor noise
+########################################
+.DS_Store
+Thumbs.db
+desktop.ini
+__pycache__/
+*.py[cod]
+*.swp
+.idea/
+.vs/
+
+########################################
+# Agent tooling
+########################################
+# Working copies created by agent tools: full checkouts, never repository content.
+# Add your tools' own scratch directories here; an overlay may bring more.
+.claude/worktrees/
+# A Codex worker's decision files (spawn_codex.sh): QUESTION-NAME.md, or FILE.question.md
+# beside a --result FILE. Result reports stay visible for the lead's review; close_worker.sh
+# moves the default RESULT-NAME.md under .myagentkit/workers/, beside the worker's records.
+/QUESTION-*.md
+*.md.question.md
+# The private store in any case: Windows and macOS fold case, so `.MYAGENTKIT/` is the same
+# folder, and with core.ignorecase false a lowercase-only rule let `git add -A` stage it.
+/.[Mm][Yy][Aa][Gg][Ee][Nn][Tt][Kk][Ii][Tt]/
+# Backend credentials live outside the repository (docs/DEV_SETUP.md, section 3); the old
+# in-repository place is read while projects move, so it stays ignored and untracked.
+/.myagentkit/backends/
+# Raw review evidence holds the whole diff and the reviewing CLI's own output. It stays
+# local; publish a deliberately scrubbed `-summary.md` instead (re-included at the bottom).
+/docs/reviews/????????T??????Z-*.md
+/docs/handoffs/*-claude-propose.json
+# Legacy name from before every reviewer shared one Markdown format.
+/docs/reviews/*-claude-review.json
+
+# Local-only tool settings. Shared configuration is committed; per-machine overrides
+# and anything holding a credential are not.
+*/settings.local.json
+
+########################################
+# Stack-specific rules
+########################################
+node_modules/
+dist/
+.DS_Store
+
+########################################
+# Re-includes — MUST STAY LAST (git applies the last matching rule)
+########################################
+# Hand-written project files that a broad pattern above would otherwise swallow go here,
+# and nowhere else.
+!/docs/reviews/*-summary.md

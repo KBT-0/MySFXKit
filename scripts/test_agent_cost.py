@@ -1,0 +1,213 @@
+"""agent_cost.py must dedupe streamed records, attribute gap re-writes and count poll turns."""
+import json
+from pathlib import Path
+import re
+import tempfile
+import unittest
+from unittest import mock
+import agent_cost
+
+
+def rec(ts, rid, usage, tools=(), model='claude-x'):
+    content = [{'type': 'tool_use', 'id': 't' + n, 'name': n, 'input': i} for n, i in tools]
+    return json.dumps({'type': 'assistant', 'timestamp': ts, 'requestId': rid,
+                       'message': {'id': 'm' + rid, 'model': model, 'usage': usage, 'content': content}})
+
+
+class AgentCostTests(unittest.TestCase):
+    def test_table_from_a_synthetic_session(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            session = Path(tmp) / 'abc.jsonl'
+            lead = [
+                # one request streamed as two records: counted once, usage from the final record
+                rec('2026-10-03T10:00:00Z', 'r1', {'input_tokens': 10, 'output_tokens': 1,
+                    'cache_creation_input_tokens': 1000, 'cache_read_input_tokens': 0,
+                    'cache_creation': {'ephemeral_5m_input_tokens': 0, 'ephemeral_1h_input_tokens': 1000}}),
+                rec('2026-10-03T10:00:01Z', 'r1', {'input_tokens': 10, 'output_tokens': 5,
+                    'cache_creation_input_tokens': 1000, 'cache_read_input_tokens': 0,
+                    'cache_creation': {'ephemeral_5m_input_tokens': 0, 'ephemeral_1h_input_tokens': 1000}},
+                    tools=[('Bash', {'command': 'sleep 30'})]),
+                # within five minutes: incremental, and a real tool call
+                rec('2026-10-03T10:02:00Z', 'r2', {'input_tokens': 5, 'output_tokens': 2,
+                    'cache_creation_input_tokens': 50, 'cache_read_input_tokens': 1000},
+                    tools=[('Read', {'file_path': 'x'})]),
+                # after a ten-minute gap: a full re-write
+                rec('2026-10-03T10:12:30Z', 'r3', {'input_tokens': 5, 'output_tokens': 2,
+                    'cache_creation_input_tokens': 1055, 'cache_read_input_tokens': 0}),
+                json.dumps({'type': 'user', 'message': {'content': 'ignored'}}),
+                json.dumps({'type': 'assistant', 'message': {'model': '<synthetic>', 'usage': {}}}),
+            ]
+            session.write_text('\n'.join(lead) + '\n')
+            sub = Path(tmp) / 'abc' / 'subagents'
+            sub.mkdir(parents=True)
+            (sub / 'agent-1.jsonl').write_text(rec('2026-10-03T10:03:00Z', 's1', {
+                'input_tokens': 1, 'output_tokens': 1, 'cache_creation_input_tokens': 7,
+                'cache_read_input_tokens': 3, 'cache_creation': {'ephemeral_5m_input_tokens': 7}},
+                tools=[('TaskOutput', {})]) + '\n')
+            (sub / 'agent-1.meta.json').write_text(json.dumps({'description': 'probe worker'}))
+
+            agents = agent_cost.session_agents(session)
+            self.assertEqual([n for n, _ in agents], ['LEAD', 'probe worker'])
+            lead_summary = agent_cost.summarize('LEAD', agent_cost.requests(session))
+            self.assertEqual(lead_summary['req'], 3)
+            self.assertEqual(lead_summary['tool'], 2)
+            self.assertEqual(lead_summary['cw'], 2105)
+            self.assertEqual(lead_summary['cw_gap'], 1055)
+            self.assertEqual(lead_summary['poll'], 1)
+            self.assertEqual((lead_summary['w1h'], lead_summary['w5']), (1000, 0))
+            self.assertEqual((lead_summary['ctx0'], lead_summary['ctxN']), (1010, 1060))
+            worker = agent_cost.summarize('w', agent_cost.requests(agents[1][1]))
+            self.assertEqual((worker['poll'], worker['w5'], worker['cw_gap']), (1, 7, 0))
+
+            text = agent_cost.table([lead_summary, worker])
+            self.assertIn('TOTAL requests 4', text)
+            self.assertIn('after >TTL gaps 1.1k (50%)', text)
+            self.assertIn('poll-only requests 2', text)
+            # hit = read / (read + write + uncached): lead 1000/3125, worker 3/11, total 1003/3136
+            self.assertEqual(agent_cost.hit(lead_summary), '32%')
+            self.assertEqual(agent_cost.hit(worker), '27%')
+            self.assertIn('cache hit 32% (alarm below 80%; owner\'s choice)', text)
+            self.assertEqual(agent_cost.hit({'cr': 0, 'cw': 0, 'inp': 0}), '-')
+
+    def test_workflow_agents_are_listed_with_their_run_and_the_journal_is_skipped(self):
+        # #172: the Workflow tool writes its agents to subagents/workflows/wf_<run>/.
+        with tempfile.TemporaryDirectory() as tmp:
+            session = Path(tmp) / 'abc.jsonl'
+            session.write_text('')
+            run = Path(tmp) / 'abc' / 'subagents' / 'workflows' / 'wf_42'
+            run.mkdir(parents=True)
+            (run / 'agent-9.jsonl').write_text('')
+            (run / 'agent-9.meta.json').write_text(json.dumps({'description': 'audit'}))
+            (run / 'journal.jsonl').write_text('')
+            (run.parents[1] / 'agent-1.jsonl').write_text('')
+            self.assertEqual([n for n, _ in agent_cost.session_agents(session)], ['LEAD', 'agent-1', 'wf_42 audit'])
+
+    def test_gap_writes_follow_each_recorded_ttl_and_legacy_fallback(self):
+        # KARARLAR B03 inv2/(h): mixed TTLs must not turn every >5m write into a miss.
+        cases = [(300, 100, 0, 0, 0), (301, 100, 0, 0, 100),
+                 (600, 100, 100, 0, 0), (3600, 100, 100, 0, 0),
+                 (3601, 100, 100, 0, 100), (600, 120, 100, 20, 20),
+                 (600, 100, 0, 100, 100)]
+        from datetime import datetime, timedelta, timezone
+        start = datetime(2026, 10, 3, tzinfo=timezone.utc)
+        for gap, written, hour, five, expected in cases:
+            with self.subTest(gap=gap, hour=hour, five=five):
+                with tempfile.TemporaryDirectory() as tmp:
+                    session = Path(tmp) / 'ttl.jsonl'
+                    session.write_text('\n'.join([
+                        rec(start.isoformat(), 'a', {'input_tokens': 1}),
+                        rec((start + timedelta(seconds=gap)).isoformat(), 'b', {
+                            'cache_creation_input_tokens': written,
+                            'cache_creation': {'ephemeral_1h_input_tokens': hour,
+                                               'ephemeral_5m_input_tokens': five}})]), encoding='utf-8')
+                    result = agent_cost.summarize('worker', agent_cost.requests(session))
+                    self.assertEqual(result['cw_gap'], expected)
+                    self.assertIn('cWrite>TTL', agent_cost.table([result]))
+
+    def test_one_hour_writes_without_a_long_gap_are_reported_unused(self):
+        # #116: a sub-agent that never waits five minutes pays the 2x write for nothing.
+        from datetime import datetime, timedelta, timezone
+        start = datetime(2026, 10, 3, tzinfo=timezone.utc)
+        for gap, unused in ((299, 700), (301, 0)):
+            with self.subTest(gap=gap), tempfile.TemporaryDirectory() as tmp:
+                session = Path(tmp) / 's.jsonl'
+                session.write_text('\n'.join(
+                    rec((start + timedelta(seconds=gap * i)).isoformat(), str(i), {
+                        'cache_creation_input_tokens': 350, 'cache_creation': {'ephemeral_1h_input_tokens': 350}})
+                    for i in range(2)), encoding='utf-8')
+                result = agent_cost.summarize('explore', agent_cost.requests(session))
+                self.assertEqual(result['w1h_unused'], unused)
+                self.assertIn('1h unused %s' % agent_cost.fmt(unused), agent_cost.table([result]))
+
+    def test_latest_finds_a_project_whose_path_has_an_underscore(self):
+        # Claude Code encodes every non-alphanumeric character as '-'; --latest once encoded
+        # only '/', and found nothing for a project folder named like project_leeway.
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / 'my_project.v2'
+            project.mkdir()
+            folder = Path(tmp) / 'home/.claude/projects' / re.sub(r'[^A-Za-z0-9]', '-', str(project.resolve()))
+            folder.mkdir(parents=True)
+            (folder / 'abc.jsonl').write_text('')
+            self.assertNotIn('_', folder.name)
+            with mock.patch.object(Path, 'home', return_value=Path(tmp) / 'home'):
+                self.assertEqual(agent_cost.latest_session(project), folder / 'abc.jsonl')
+
+    def test_poll_detection_is_about_waiting_not_about_running_a_job(self):
+        self.assertTrue(agent_cost.is_poll('Bash', {'command': 'while true; do sleep 20; done'}))
+        self.assertTrue(agent_cost.is_poll('Bash', {'command': 'pgrep -x blender'}))
+        self.assertTrue(agent_cost.is_poll('BashOutput', {}))
+        self.assertFalse(agent_cost.is_poll('Bash', {'command': 'python3 generate.py --stage city'}))
+        self.assertFalse(agent_cost.is_poll('Read', {'file_path': 'docs/STATE.md'}))
+
+    def test_a_unicode_worker_description_prints_on_a_legacy_stdout(self):
+        # A Windows pipe is cp1252 unless UTF-8 mode is on: `İstanbul worker` raised there.
+        import os, subprocess, sys
+        with tempfile.TemporaryDirectory() as tmp:
+            session = Path(tmp) / 'abc.jsonl'
+            session.write_text(rec('2026-10-03T10:00:00Z', 'r1', {'input_tokens': 1, 'output_tokens': 1}) + '\n')
+            sub = Path(tmp) / 'abc' / 'subagents'
+            sub.mkdir(parents=True)
+            (sub / 'agent-1.jsonl').write_text(rec('2026-10-03T10:01:00Z', 's1', {'input_tokens': 1}) + '\n')
+            (sub / 'agent-1.meta.json').write_text(json.dumps({'description': 'İstanbul worker'}), encoding='utf-8')
+            env = {k: v for k, v in os.environ.items() if k != 'PYTHONUTF8'}
+            env['PYTHONIOENCODING'] = 'cp1252'
+            run = subprocess.run([sys.executable, agent_cost.__file__, str(session)],
+                                 capture_output=True, env=env, timeout=30)
+            self.assertEqual(run.returncode, 0, run.stderr.decode('utf-8', 'replace'))
+            self.assertIn('İstanbul worker', run.stdout.decode('utf-8'))
+
+    def test_output_tokens_are_shown_and_an_untimed_request_does_not_crash(self):
+        # #254: output tokens are summed per agent and in TOTAL; #255: one request without a
+        # timestamp sorted with a naive minimum beside aware timestamps raised TypeError.
+        with tempfile.TemporaryDirectory() as tmp:
+            session = Path(tmp) / 'b.jsonl'
+            session.write_text(
+                '{"type":"assistant","timestamp":"2026-10-01T10:00:00.000Z","requestId":"r1","message":'
+                '{"id":"m1","model":"claude-opus","usage":{"input_tokens":10,"output_tokens":1500}}}\n'
+                '{"type":"assistant","requestId":"r2","message":{"id":"m2","model":"claude-opus",'
+                '"usage":{"input_tokens":10,"output_tokens":500}}}\n', encoding='utf-8')
+            rows = agent_cost.requests(session)
+            self.assertEqual([r['t'] is None for r in rows], [True, False])
+            text = agent_cost.table([agent_cost.summarize('LEAD', rows)])
+            self.assertIn(' out ', text.splitlines()[0])
+            self.assertIn('output 2.0k', text)
+
+    def test_compactions_are_counted_per_agent_and_a_copied_one_once(self):
+        # #303: two workers handed off at their second compaction near 80k, and the table did
+        # not show it; a continued session's transcript copies the parent's boundary (#253).
+        boundary = json.dumps({'type': 'system', 'subtype': 'compact_boundary', 'uuid': 'u1',
+                               'timestamp': '2026-10-03T10:01:00Z'})
+        second = json.dumps({'type': 'system', 'subtype': 'compact_boundary', 'uuid': 'u2'})
+        with tempfile.TemporaryDirectory() as tmp:
+            twice, never, child = (Path(tmp) / n for n in ('a.jsonl', 'b.jsonl', 'c.jsonl'))
+            twice.write_text('\n'.join([rec('2026-10-03T10:00:00Z', 'r1', {'input_tokens': 1}), boundary,
+                                        rec('2026-10-03T10:02:00Z', 'r2', {'input_tokens': 1}), second]),
+                             encoding='utf-8')
+            never.write_text(rec('2026-10-03T10:00:00Z', 'r3', {'input_tokens': 1}), encoding='utf-8')
+            child.write_text('\n'.join([boundary, rec('2026-10-03T10:03:00Z', 'r4', {'input_tokens': 1})]),
+                             encoding='utf-8')
+            seen, counts = set(), []
+            for path in (twice, never, child):
+                found = []
+                rows = agent_cost.requests(path, seen, found)
+                counts.append(agent_cost.summarize(path.stem, rows, len(found))['cmp'])
+            self.assertEqual(counts, [2, 0, 0])
+            table = agent_cost.table([agent_cost.summarize('w', rows, 2)])
+            self.assertIn(' cmp ', table.splitlines()[0])
+            self.assertRegex(table.splitlines()[1], r'^w\s+1\s+0\s.*\s2\s')
+
+    def test_the_peak_context_is_the_largest_request_not_the_last(self):
+        # #303: ctxN is the last request's context, small after a compaction; the issue read
+        # it as the maximum. The peak is shown beside it.
+        with tempfile.TemporaryDirectory() as tmp:
+            session = Path(tmp) / 's.jsonl'
+            session.write_text('\n'.join(
+                rec(f'2026-10-03T10:0{i}:00Z', str(i), {'input_tokens': 1, 'cache_read_input_tokens': n})
+                for i, n in enumerate((49_000, 79_800, 12_000))), encoding='utf-8')
+            result = agent_cost.summarize('w', agent_cost.requests(session))
+            self.assertEqual((result['ctx0'], result['ctxMax'], result['ctxN']), (49_001, 79_801, 12_001))
+            self.assertIn('49.0k->79.8k->12.0k', agent_cost.table([result]))
+
+
+if __name__ == '__main__':
+    unittest.main()

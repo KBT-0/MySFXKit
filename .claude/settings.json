@@ -1,0 +1,203 @@
+{
+  "promptCacheTtl": "1h",
+  "autoCompactWindow": 450000,
+  "worktree": {
+    "bgIsolation": "none"
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "extraKnownMarketplaces": {
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    },
+    "myagentkit": {
+      "source": {
+        "source": "github",
+        "repo": "KBT-0/MyAgentKit_Keel"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "ponytail@ponytail": true,
+    "myagentkit@myagentkit": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(./scripts/check.sh)",
+      "Bash(scripts/check.sh)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git log --no-textconv --no-ext-diff)",
+      "Bash(git log --no-textconv --no-ext-diff *)",
+      "Bash(git diff --no-textconv --no-ext-diff)",
+      "Bash(git diff --no-textconv --no-ext-diff *)",
+      "Bash(git show --no-textconv --no-ext-diff)",
+      "Bash(git show --no-textconv --no-ext-diff *)",
+      "Bash(git branch)",
+      "Bash(git branch -v)",
+      "Bash(git branch -vv)",
+      "Bash(git branch -a)",
+      "Bash(git branch --merged)",
+      "Bash(git branch --no-merged)",
+      "Bash(git branch --show-current)",
+      "Bash(git worktree list)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(ls *)",
+      "Bash(wc *)",
+      "Bash(grep *)",
+      "Bash(date)",
+      "Bash(pwd)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Get-ChildItem *)"
+    ],
+    "deny": [
+      "Bash(git *--out*)",
+      "Bash(git *--ext*)",
+      "Bash(git *--textc*)",
+      "Bash(git *--sub*)",
+      "PowerShell(git *--out*)",
+      "PowerShell(git *--ext*)",
+      "PowerShell(git *--textc*)",
+      "PowerShell(git *--sub*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|Monitor",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_destructive_git.py\"",
+            "timeout": 30,
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "WebFetch|WebSearch|Bash|PowerShell|Monitor",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_private_email.py\"",
+            "timeout": 30,
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell|Monitor",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_root_scan.py\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_secret_files.py\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_worker_route.py\"",
+            "timeout": 30,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_boundaries.py\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/progress_reminder.py\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/suggestions.py\" post-tool",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/context_size.py\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/suggestions.py\" prompt",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/gate_on_stop.sh\"",
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/plain_report.py\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/suggestions.py\" stop",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"$CLAUDE_PROJECT_DIR/.claude/hooks/after_compact.txt\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

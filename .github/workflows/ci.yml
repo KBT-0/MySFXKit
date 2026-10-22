@@ -1,0 +1,27 @@
+name: CI
+
+# CI runs the SAME script the pre-commit hook and every agent runs. There is exactly one
+# definition of "green" in this repository, and it lives in scripts/check.sh.
+#
+# NOTE: scripts/*.sh must be executable IN THE GIT INDEX, or this job dies with
+# "Permission denied", exit 126 — see docs/GOTCHAS.md. Verify with `git ls-files -s scripts`.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gates:
+    name: check.sh (build + tests + boundary gates)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # The whole history: check.sh's Done: trailer check and the strong review reminder read
+        # it, and the default depth of 1 holds only GitHub's own merge commit on a pull request,
+        # which carries no trailer, so no commit of the pull request was checked (#135).
+        with:
+          fetch-depth: 0
+
+      - name: Run gates
+        run: ./scripts/check.sh

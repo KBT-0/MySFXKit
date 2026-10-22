@@ -1,0 +1,233 @@
+#!/usr/bin/env sh
+# KIT-OWNED: do not edit locally; change it in the kit and re-sync.
+# Two separate checks. First, a "Done: <id>" trailer closes a task, so the state files this
+# commit records may not still mention it (docs/WORKFLOW.md, "Task ids"): STATE.md,
+# BACKLOG.md, the strong review cycle's list and reports, and audits (B11 inv1#118 A;
+# Martini, Besker and Bosch 2018; code.claude.com/docs/en/best-practices, "Set up hooks"). Second, a trailer
+# crediting an AI tool is rejected (AGENTS.md: no AI attribution in git). Coding tools add that trailer by default at commit time, so a rule in a document did not
+# hold: sessions carried it into most commits of a project whose owner had forbidden it,
+# and removing it later meant rewriting every commit and a force-push. The trailer is
+# written into the message file git passes here, so this is the only place to catch it.
+# The Stop reminder allows one continuation deliberately; the vendor limit is eight
+# (https://code.claude.com/docs/en/hooks, 2026-10-15; B10 inv3#7).
+# The real check gate runs in pre-commit; this hook separately checks the message.
+# A human passes, even one whose name contains a tool's ("Claude Monet", "Ana Raider"):
+# a trailer is rejected only when its whole name is a tool or model name, its address is
+# a tool vendor's or a [bot], or a "Generated with" line names a tool.
+# A hook of the project's own (husky, lefthook, a script of its own) lives beside this
+# one as commit-msg.project, project-owned, and runs FIRST with git's arguments: its failure
+# is the commit's failure, and this hook still runs after it. No other hooks path.
+project_hook="$(dirname -- "$0")/commit-msg.project"
+# A hook without a #! line is refused: Git for Windows never runs one, chmod +x or not, and
+# the documented one-line form was skipped in silence, so the project's own check never ran
+# (#165). One with a #! line and no execute bit is still skipped: chmod -x switches it off.
+if [ -x "$project_hook" ]; then "$project_hook" "$@" || exit $?
+elif [ -f "$project_hook" ] && case $(head -n 1 -- "$project_hook") in '#!'*) false ;; esac; then
+  printf '%s\n' "commit-msg: $project_hook has no #! line, and Git for Windows never runs such a file. Commit refused. Start it with #!/bin/sh and chmod +x it, or delete it." >&2; exit 1
+fi
+set -u
+# C locale: in a UTF-8 one grep's "." stopped at a byte that is not valid UTF-8, and a
+# "[bot]" trailer whose name held a Latin-1 byte passed. In C every byte is a character.
+LC_ALL=C; export LC_ALL
+msg=${1:-}
+if [ ! -f "$msg" ] || [ ! -r "$msg" ]; then
+  printf '%s\n' "commit-msg: cannot read the commit message file '$msg'; refusing to pass it unchecked." >&2
+  exit 1
+fi
+# Finished tasks. Runs whatever AGENTS.md says about attribution: the two rules are separate.
+# Git's own parser reads the trailers, so what counts is what `git log` will show: it matches
+# the key in any case ("done:") and unfolds a value folded onto indented lines. Each value,
+# trimmed, is ONE id, read whole as the gate's history scan reads it: "Done: K4 K5" and an
+# empty "Done:" are rejected, never split into words. The files are read from the index
+# (`git show :path`), which is what this commit records; the working tree may differ. A
+# mention is the id with no letter, digit, "_" or "-" either side, so closing K3 does not
+# match K3b or K3-a. Ids are case-insensitive: "Done: k4" passed while STATE.md named K4.
+# --no-divider: without it a body line "---" read as a patch start and hid every trailer after
+# it, while `git log` and check.sh still read them (#173).
+trailers=$(git interpret-trailers --parse --no-divider "$msg") || {
+  echo "commit-msg: cannot parse the trailers; refusing to pass the message unchecked." >&2
+  exit 1
+}
+# Only task closure needs report paths; attribution-only commits need no listing.
+if printf '%s\n' "$trailers" | grep -qi '^Done:'; then
+  # List separately: a pipeline lost git's failure and silently omitted the reports.
+  paths=$(GIT_LITERAL_PATHSPECS=0 GIT_GLOB_PATHSPECS=0 GIT_NOGLOB_PATHSPECS=0 \
+    git -c core.quotePath=false ls-files -- ':(icase)docs/reviews' ':(icase)docs/audits') || {
+    echo "commit-msg: cannot list the index; refusing to pass the message unchecked." >&2
+    exit 1
+  }
+  # Git still quotes control characters, backslashes and double quotes. Refuse those paths
+  # and a non-canonical directory case, so the hook, gate and reminder see the same reports.
+  reviews=$(printf '%s\n' "$paths" | grep -iE '^"?docs/(reviews|audits)/')
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    case $f in
+      '"'*) printf '%s\n' "commit-msg: quoted paths under docs/reviews or docs/audits are not supported; rename $f." >&2
+            exit 1 ;;
+      docs/reviews/*|docs/audits/*) ;;
+      *) printf '%s\n' "commit-msg: use docs/reviews or docs/audits with this exact case in the index: $f." >&2
+         exit 1 ;;
+    esac
+  done <<REVIEWS
+$reviews
+REVIEWS
+fi
+# Owner-chosen format (KARARLAR B10 inv1#93, inv2#151). The digit avoids
+# treating ordinary words as ids; one inner dash keeps ids short.
+# plain_report.py reads these POSIX/Python-compatible patterns as its single source.
+TASK_ID_PATTERN='[A-Za-z][A-Za-z0-9]*(-[A-Za-z0-9]+)?'
+TASK_ID_DIGIT_PATTERN='[0-9]'
+mentioned=0
+while IFS= read -r line; do
+  case $line in [Dd][Oo][Nn][Ee]:*) ;; *) continue ;; esac
+  id=$(printf '%s\n' "${line#*:}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+  if ! printf '%s\n' "$id" | grep -qE "^$TASK_ID_PATTERN$" ||
+     ! printf '%s\n' "$id" | grep -q "$TASK_ID_DIGIT_PATTERN"; then
+    printf '%s\n' "commit-msg: 'Done: $id' does not name a task id: exactly one id, a letter, then letters" >&2
+    echo "            and digits with at least one digit and at most one inner '-' (K4, L1b, K7-a)." >&2
+    echo "            One trailer per id." >&2
+    exit 1
+  fi
+  # The reports are listed whole, one per line and unquoted (a name may hold a space or a
+  # non-ASCII letter). The listing above enables pathspec magic locally, even if the caller
+  # exported GIT_LITERAL_PATHSPECS; unrelated index entries are never loaded.
+  strong=$(printf '%s\n' "$reviews" | grep '^docs/reviews/strong-[^/]*\.md$')
+  audits=$(printf '%s\n' "$reviews" | grep '^docs/audits/[^/]*\.md$')
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    hits=$(git show ":$f" 2>/dev/null | grep -inE "(^|[^A-Za-z0-9_-])$id([^A-Za-z0-9_-]|\$)")
+    [ -n "$hits" ] || continue
+    printf '%s\n' "commit-msg: this commit closes $id but $f still mentions it: delete the line (the history" >&2
+    case $f in
+      # The list and its reports are living files too (#301): dropping the trailer loses the id's trace.
+      docs/STRONG_REVIEW.md|docs/reviews/*|docs/audits/*)
+        echo "            is in git). The strong review list, its reports and audits keep only open findings: the closing" >&2
+        echo "            commit deletes the finding's line (docs/WORKFLOW.md, \"Closing deletes\")." >&2 ;;
+      *) echo "            is in git), or drop the trailer." >&2 ;;
+    esac
+    printf '%s\n' "$hits" | sed "s|^|            $f:|" >&2
+    mentioned=1
+  done <<FILES
+docs/STATE.md
+docs/BACKLOG.md
+docs/STRONG_REVIEW.md
+$strong
+$audits
+FILES
+done <<EOF
+$trailers
+EOF
+[ "$mentioned" -eq 0 ] || exit 1
+# The owner decides (setup interview): without the rule line in AGENTS.md, AI tools may be
+# credited, including Assisted-by (KARARLAR D07 inv3#108 b; Q9 Yes).
+# A missing AGENTS.md is a broken setup, not a choice: the hook stays on, and so
+# does an AGENTS.md that is not a readable file: an error is not the owner's choice either.
+# (A directory is tested here, not left to grep: GNU grep exits 2 on one, but a grep set to
+# skip directories exits 1, which would read as the owner's choice.)
+if [ -e AGENTS.md ]; then
+  rule=2
+  [ ! -f AGENTS.md ] || { grep -q 'No AI attribution in git' AGENTS.md; rule=$?; }
+  case $rule in
+    0) ;;
+    1) exit 0 ;;
+    *) echo "commit-msg: cannot read AGENTS.md for the attribution rule; refusing to pass the message unchecked." >&2
+       exit 1 ;;
+  esac
+fi
+# Nothing is cut, not even below the scissors line `commit -v` writes: the hook cannot tell
+# git's editor header from the same lines given with -m, which git keeps, and cutting at the
+# header let a credit below it into the history. A trailer quoted in a `commit -v` diff is
+# therefore rejected too; the message says how to get past it. Fails closed.
+# Comment lines are NOT dropped: whether git keeps them depends on commit.cleanup, on a
+# --cleanup flag this hook cannot see, and on `-m` versus the editor (git's default keeps
+# them for -m). Checking them fails closed; a commented-out credit left by a squash is one
+# line to delete.
+# ponytail: fixed lists of tool, model and vendor names; extend them when a new tool's trailer gets through.
+# Kimi is a human given name too, so only its vendor's domains are listed (#204).
+tools='claude|anthropic|openai|chatgpt|gpt|codex|copilot|gemini|cursor|aider|devin|windsurf|codeium|tabnine|amp|qwen|cline|kiro|opencode|junie|openhands|warp|grok|deepseek|glm'
+words="$tools|opus|sonnet|haiku|fable|mythos|context|code|coder|agent|ai|assist|assistant|cli|chat|pro|flash|mini|turbo|[a-z]*[0-9][a-z0-9.]*"
+domains='anthropic\.com|openai\.com|ampcode\.com|cursor\.(com|sh)|aider\.chat|devin\.ai|cognition\.ai|windsurf\.com|codeium\.com|tabnine\.com|moonshot\.(ai|cn)|z\.ai|deepseek\.com|x\.ai'
+# Behind a comment character a trailer is still checked: git keeps "# Co-Authored-By: ..."
+# under -m or verbatim cleanup. Punctuation is skipped whatever it is; a configured
+# core.commentChar is skipped too, which matters when it is a letter ("x Co-Authored-By:").
+# core.commentString (git 2.45) is its alias: whichever of the two is set last, across the
+# global and local files, is the one git uses; preferring commentString skipped "#" from the
+# global file while git took a local commentChar of "x", and "x Co-Authored-By:" passed.
+# "auto" is git choosing a punctuation character, not the letters a, u, t and o.
+# Only an absent key (git config exit 1) means git's default; any other failure, git missing
+# included, fails closed: an unchecked read left only ":" as a separator and let
+# "Co-Authored-By=Claude <...>" through.
+config_get() {
+  value=$(git config "$1" "$2" 2>/dev/null)
+  found=$?
+  [ "$found" -le 1 ] || {
+    printf '%s\n' "commit-msg: cannot read ${3:-$2} from git config; refusing to pass the message unchecked." >&2
+    exit 1
+  }
+}
+# A failed transformation fails closed too: an unchecked one dropped "=" from the separators.
+fail_parse() {
+  printf '%s\n' "commit-msg: cannot parse $1 from git config; refusing to pass the message unchecked." >&2
+  exit 1
+}
+# Git before 2.45 ignores core.commentString: there "commentChar=x, then commentString=y"
+# keeps "x Co-Authored-By:", and reading both skipped only "y". An unreadable version fails closed.
+version=$(git version 2>/dev/null | sed -n 's/^git version \([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1 \2/p')
+[ -n "$version" ] || {
+  echo "commit-msg: cannot read the git version; refusing to pass the message unchecked." >&2
+  exit 1
+}
+keys=char
+if [ "${version% *}" -gt 2 ] || { [ "${version% *}" -eq 2 ] && [ "${version#* }" -ge 45 ]; }; then
+  keys='(char|string)'
+fi
+config_get --get-regexp "^core\\.comment$keys\$" 'core.commentChar or core.commentString'
+# One "key value" line per setting, in configuration order: the last one is git's.
+comment=$(printf '%s\n' "$value" | sed -n '$s/^[^ ]* //p') || fail_parse core.commentChar
+comment=$(printf '%s' "$comment" | tr -cd '[:alnum:]') || fail_parse core.commentChar
+prefix='^[^[:alnum:]]*'
+[ -z "$comment" ] || [ "$comment" = auto ] || prefix="^([^[:alnum:]]|[$comment])*"
+# Git takes whitespace before a trailer's colon and folds a value onto indented lines, so
+# "Co-Authored-By : Claude" and an identity on the next line are trailers too. Each line is
+# checked joined to every folded line after it, never to only some of them: a partial join
+# read "Co-authored-by: Claude" out of a name folded as "Claude" and "Monet <...>".
+# A blank or whitespace-only line ends the value: it is a paragraph break, and unfolding
+# across it let indented prose below hide a bare tool name ("Co-Authored-By: Claude").
+# trailer.separators makes other characters separators ("Co-Authored-By=Claude" with "="),
+# so each configured one counts, and the colon always does. In the bracket expression "]"
+# goes first and "-" last, where both are literal.
+config_get --get trailer.separators
+seps=$value
+bracket=:$(printf '%s' "$seps" | tr -d ':]-') || fail_parse trailer.separators
+case $seps in *']'*) bracket="]$bracket" ;; esac
+case $seps in *-*) bracket="$bracket-" ;; esac
+trailer="${prefix}[a-z]+(-[a-z]+)*-by[[:space:]]*[$bracket]"
+text=$(awk '{ line[NR] = $0; folded[NR] = /^[[:space:]]+[^[:space:]]/ }
+            END { for (i = NR - 1; i > 0; i--)
+                    if (folded[i + 1]) line[i] = line[i] " " line[i + 1]
+                  for (i = 1; i <= NR; i++) print line[i] }' "$msg") || {
+  echo "commit-msg: cannot unfold the commit message; refusing to pass it unchecked." >&2
+  exit 1
+}
+# A display name may be quoted ("GitHub Copilot" or 'Claude'): the opening quote is skipped
+# and the closing one is a separator, so the whole-name check sees the bare name.
+sep="[[:space:]:_/().,\"'-]"
+# The kernel's "Assisted-by: AGENT [TOOL]" form names the tool in brackets ("LLM [Claude]").
+printf '%s\n' "$text" | grep -iE \
+  -e "${trailer}[[:space:]]*[\"']?((github|google|openai)[[:space:]]+)?($tools)([0-9][a-z0-9.]*)?($sep+($words))*$sep*(<|\$)" \
+  -e "$trailer.*(\\[bot\\]|@([a-z0-9-]+\\.)*($domains)>)" \
+  -e "$trailer.*\\[[[:space:]]*((github|google|openai)[[:space:]]+)?($tools)([^[:alnum:]]|\$)" \
+  -e "${prefix}generated (with|by)[[:space:]]*\\[?((github|google|openai)[[:space:]]+)?($tools)([^[:alnum:]]|\$)" \
+  >&2
+case $? in
+  0) echo "commit-msg: crediting an AI tool (above) is not allowed in this repository (AGENTS.md)." >&2
+     echo "            Remove the line and commit again; the tool's default does not override the rule." >&2
+     if grep -q -e '------------------------ >8 ------------------------' -- "$msg"; then
+       echo "            If the line is in the diff quoted below the scissors line (commit -v)," >&2
+       echo "            commit without -v, or remove the quoted line from the message." >&2
+     fi
+     exit 1 ;;
+  1) exit 0 ;;
+  *) echo "commit-msg: the trailer check itself failed; refusing to pass the message unchecked." >&2
+     exit 1 ;;
+esac
