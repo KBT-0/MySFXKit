@@ -18,6 +18,9 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   has not confirmed; the defaults are listed under "Blocked / waiting on Kemal".
 - Phase 1 of the brief (analysis of §5.1, A/B/C, prior art, work breakdown): written to
   `docs/research/2026-10-22-format-evaluation.md` by the same session; the decision is Kemal's.
+- Handed off (Claude Code, Fable 5.1, 2026-10-22): the setup session ended at 202k context;
+  the next lead session starts from `docs/handoffs/2026-10-22-lead-handoff.md` (SFX-1, then
+  SFX-2). Delete this line and the handoff file when that session has read them.
 
 (task + module + status, or one line per operation pointing at its `docs/<OPERATION>.md`;
 delete when done — an EMPTY section means nothing is in flight, so never park closed work
