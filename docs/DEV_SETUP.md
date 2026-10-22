@@ -102,11 +102,15 @@ shallow one, which lacks the older commit the checklist merges from.
 
 ## 2. Toolchain on PATH
 
-`check.sh` needs only POSIX `sh`, `git` and Python 3.11+ for now (the kit's own tooling); the format's toolchain (Node, most likely) is added here with the §5.1 decision. Per-user installs are the usual trap here: they work in your
+`check.sh` needs POSIX `sh`, `git`, Python 3.11+ (the kit's own tooling) and Node 26 (`.nvmrc`;
+`node --test` over `core/`, `adapters/web/` and `playground/`). `scripts/doctor.sh` checks
+the Node a git hook would see once `.nvmrc` exists. Per-user installs are the usual trap here: they work in your
 interactive shell and are missing from the non-login shell a git hook runs in, so the gate
 fails for a reason that has nothing to do with the code.
 
-On this Mac, Homebrew's `/opt/homebrew/bin` is on PATH in login shells; add it to `toolchain_path` in `scripts/check.sh` the day the gate needs `node`.
+On this Mac, Homebrew's `/opt/homebrew/bin` is on PATH in login shells. If a hook started by a
+GUI client cannot find `node`, set `toolchain_path` in `scripts/check.sh` to that directory;
+it is left empty on purpose so an nvm Node is not shadowed.
 
 If the gate fails with "command not found", that is this — not a broken build.
 
