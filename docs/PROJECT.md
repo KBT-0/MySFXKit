@@ -124,3 +124,6 @@ Its **AÇIK** items (§5.1 format, §7 timings, §9 questions) are OPEN until Ke
   `/myagentkit:kit-feedback`). Kemal confirms or declines; then this row becomes DECIDED.
 - 2.2 OPEN — the sound recipe format (brief §5.1). Evaluation:
   `docs/research/2026-10-22-format-evaluation.md`.
+- 2.3 DECIDED — `KBT-0/MySFXKit` is a **public** repository from day one, so GitHub Pages can
+  host the playground; the licence file (brief §9, MIT proposed) is still OPEN.
+  Decided: 2026-10-22, approved by Kemal (he made it public himself).

@@ -38,7 +38,6 @@ here; that meaning is a contract the gate does not check)
      import in `core/`), written before the §5.1 decision; their folder names follow brief §5.
 - The §5.1 format decision (A / B / C): Kemal decides after reading the evaluation.
 - The brief's open questions §9 (lecture length, students' computers, name, licence, Steam cases).
-- Making `KBT-0/MySFXKit` public: Kemal's decision, asked before the lecture.
 
 ## Known issues / watch out
 

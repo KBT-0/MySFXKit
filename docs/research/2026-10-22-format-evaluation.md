@@ -202,19 +202,18 @@ agent-days with Kemal reviewing; "worker" means a parallel kit worker session.
 |---|---|---|---|
 | 1 (Thu 23) | Kemal decides §5.1. Schema v0 (block list of §1–2, exprs, `seed`, `inputs`, `spatial`); core interpreter in JS with an offline renderer; expr parser; tests (seeded, feature-based like Leeway's) | 1 day | `core/` passing `check.sh` |
 | 2 (Fri 24) | AudioWorklet adapter; diesel and hull-water recipes playing with sliders in a bare page | 1 day | sound in Safari and Chrome on the Mac |
-| 3 (Sat 25) | Playground v0: paste box with fence stripping and schema errors, play button, input sliders, bundled recipes; GitHub Pages deploy | 1 day | public URL (repo private; Pages needs a public repo or a Pro plan — **Kemal decides**; a local `file://` or `npx serve` fallback for the class) |
+| 3 (Sat 25) | Playground v0: paste box with fence stripping and schema errors, play button, input sliders, bundled recipes; GitHub Pages deploy | 1 day | public URL on GitHub Pages (the repo is public, Kemal 2026-10-22); a local `npx serve` fallback for the class |
 | 4–5 (Sun 26–Mon 27) | **Presentation draft**, lesson blocks 1–8, with screenshots; backup video of the Leeway demo and of one AI-generated recipe. Worker in parallel: impact, gull, city, horn, ferry recipes | 1.5 day + 1 worker-day | deck v1 |
 | 6 (Tue 28) | 2D listener scene (drag → pan and distance), WAV export; polish the deck from the first read | 1 day | playground v1 |
 | 7 (Wed 29) | Copy-prompt text and skill v0; run the deferred LLM experiment (three vendors, five prompts) and fix the schema's worst error type. **Deck draft done (calendar rule)** | 1 day | `skill/`, experiment notes |
 | 8 (Thu 30) | Leeway Mac build with `taka_sound.txt` + F5; projector/HDMI audio check with the department's answer; classic examples (click, jump, explosion, wind) | 1 day | rehearsal checklist ticked |
 | 9 (Fri 31) | Full rehearsal with timing; fix what broke; freeze | 1 day | frozen build + deck |
-| 10 (Sat 1 – Sun 2) | Buffer. Public-repo decision, licence file if yes | 0.5 day | — |
+| 10 (Sat 1 – Sun 2) | Buffer. Licence file (MIT proposed, brief §9) | 0.5 day | — |
 
 Not in the ten days: C++/Unity interpreters, MCP, Faust export (Phases 1–2).
 
 **Dependencies on Kemal, in order:** the §5.1 decision (day 1); lecture length and whether
-students have laptops (shapes the deck, day 4); GitHub Pages hosting of a private repo
-(day 3); the public-repo decision (before the lecture).
+students have laptops (shapes the deck, day 4); the licence file (the repo is already public).
 
 Sources checked 2026-10-22: glama.ai listings for bfxr-mcp, bfxr2-mcp, sfx-gen-mcp;
 libraries.io for make-sfx-mcp; elementary.audio docs; github.com/colinbdclark/Flocking;

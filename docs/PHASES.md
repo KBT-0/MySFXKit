@@ -31,7 +31,6 @@ reasons are in `docs/WORKFLOW.md`, "The state, backlog and phase files".
 - MCP server for render / preview / WAV export — Phase 2
 - Provider interface for external generators (ElevenLabs etc.) — Phase 2
 - Music and adaptive music — Phase 3
-- Making the GitHub repository public — Kemal's decision, asked before the lecture
 - Marketing the kit in the lecture — never (brief §2, KARAR)
 
 <!-- Spend as much effort here as on the list above. Each entry names the phase it belongs to
