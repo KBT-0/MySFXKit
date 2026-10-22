@@ -41,11 +41,18 @@ async function coreAllocations(work) {
   }
 }
 
-for (const [name, recipe, inputs] of [['diesel', diesel, { throttle: 0.5 }], ['others', others, {}], ['hull_water', load('hull_water'), { speed: 0.5 }], ['city_bed', load('city_bed'), {}], ['horn', load('horn'), {}], ['ferry', load('ferry'), {}]]) test(`${name}: render allocates nothing per control block once optimized (an AudioWorklet calls it every 128 frames)`, async () => {
+// `event`: a trigger node fired before every block of the measured renders, so a trigger() that allocates breaks the budget too.
+for (const [name, recipe, inputs, event] of [['diesel', diesel, { throttle: 0.5 }], ['others', others, {}], ['hull_water', load('hull_water'), { speed: 0.5 }], ['city_bed', load('city_bed'), {}], ['horn', load('horn'), {}], ['ferry', load('ferry'), {}], ['hull_impact', load('hull_impact'), {}, 'impact']]) test(`${name}: render${event ? ' and trigger' : ''} allocate nothing per control block once optimized (an AudioWorklet calls it every 128 frames)`, async () => {
   const instance = compileRecipe(recipe, { sampleRate: RATE });
   for (const [input, value] of Object.entries(inputs)) instance.setInput(input, value);
   const out = new Float32Array(128);
-  const renderSeconds = (seconds) => { for (let i = 0; i < seconds * RATE / out.length; i++) instance.render(out); };
+  const strengths = Float64Array.of(1, 0.3, 0.7);
+  const renderSeconds = (seconds) => {
+    for (let i = 0; i < seconds * RATE / out.length; i++) {
+      if (event) instance.trigger(event, strengths[i % 3]);
+      instance.render(out);
+    }
+  };
   renderSeconds(5);  // warm up: the JIT optimizes the hot path, again for a second recipe in this process
   // The smaller of two runs: the first may still run code the JIT has not optimized yet.
   const least = Math.min(await coreAllocations(() => renderSeconds(10)), await coreAllocations(() => renderSeconds(10)));

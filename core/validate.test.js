@@ -45,7 +45,7 @@ test('validate: shapes, typos and option checks', () => {
   assert.match(errorsOf(recipe([{ id: 'out', type: 'osc', cuttoff: 3 }]))[0].message, /unknown key for a osc node/);
   assert.match(errorsOf(recipe([{ id: 'out', type: 'osc', wave: 'square' }]))[0].message, /must be one of sine, saw/);
   assert.match(errorsOf(recipe([{ id: 'p', type: 'pulse', hold: { g: [1, 0] } }, { id: 'out', type: 'osc' }]))[0].message, /low <= high/);
-  assert.match(errorsOf(recipe([{ id: 'n', type: 'noise' }, { id: 'out', type: 'lowpass', in: 'n', env: { trigger: 'n', decay: 1 } }]))[0].message, /must be a trigger node \(pulse, randomTrigger\)/);
+  assert.match(errorsOf(recipe([{ id: 'n', type: 'noise' }, { id: 'out', type: 'lowpass', in: 'n', env: { trigger: 'n', decay: 1 } }]))[0].message, /must be a trigger node \(pulse, randomTrigger, trigger\)/);
   assert.match(errorsOf(recipe([{ id: 'n', type: 'noise' }, { id: 'out', type: 'mix', in: ['n'], gains: [1, 2] }]))[0].message, /one gain per input/);
   assert.match(errorsOf({ ...recipe([{ id: 'out', type: 'osc' }]), seed: 1.5 })[0].path, /seed/);
   assert.match(errorsOf(recipe([{ id: 'out', type: 'osc' }], { inputs: { x: { min: 1, max: 0, default: 0 } } }))[0].message, /min <= default <= max/);
@@ -76,8 +76,8 @@ test('names like __proto__ and toString are plain names, not prototype lookups',
   assert.throws(() => instance.setInput('valueOf', 1), /unknown input/);
 });
 
-test('validate: the bundled hull_water, city_bed, horn and ferry are valid', () => {
-  for (const name of ['hull_water', 'city_bed', 'horn', 'ferry']) {
+test('validate: the bundled hull_water, city_bed, horn, ferry and hull_impact are valid', () => {
+  for (const name of ['hull_water', 'city_bed', 'horn', 'ferry', 'hull_impact']) {
     const r = JSON.parse(readFileSync(new URL(`./recipes/${name}.json`, import.meta.url), 'utf8'));
     assert.deepEqual(validateRecipe(r), { ok: true, errors: [] }, name);
   }
@@ -116,9 +116,30 @@ test('validate: env takes optional attack and length; other keys are rejected', 
   const env = (e) => recipe([{ id: 'p', type: 'pulse', hold: { len: [0.1, 0.2] } }, { id: 'out', type: 'osc', env: e }]);
   assert.deepEqual(errorsOf(env({ trigger: 'p', decay: 0.1, attack: 0.01, length: 'p.len' })), []);
   assert.deepEqual(errorsOf(env({ trigger: 'p', decay: 0.1, length: 0.3 })), []);
-  assert.match(errorsOf(env({ trigger: 'p', decay: 0.1, release: 0.2 }))[0].message, /optional attack and length/);
+  assert.match(errorsOf(env({ trigger: 'p', decay: 0.1, release: 0.2 }))[0].message, /optional attack, length and stop/);
   assert.match(errorsOf(env({ trigger: 'p', attack: 0.1 }))[0].message, /decay: <seconds>/);
   assert.match(errorsOf(env({ trigger: 'p', decay: 0.1, attack: 'p.nope' }))[0].message, /a pulse node has hz, jitter, len$/);
+});
+
+test('validate: trigger options, its strength field, and no gain or env', () => {
+  const event = (node, extra = {}) => recipe([{ id: 'hit', type: 'trigger', ...node }, { id: 'out', type: 'osc', ...extra }]);
+  assert.deepEqual(errorsOf(event({ range: [0, 2], maxHold: 1.2 }, { gain: 'hit.strength', sync: 'hit', env: { trigger: 'hit', decay: 0.1, stop: 1.2 } })), []);
+  assert.match(errorsOf(event({ range: [1, 0] }))[0].message, /low <= high/);
+  assert.match(errorsOf(event({ range: 1 }))[0].message, /\[low, high\]/);
+  assert.match(errorsOf(event({ range: [0, 'x'] }))[0].message, /two numbers/);
+  assert.match(errorsOf(event({ maxHold: -1 }))[0].message, /must be seconds, a number >= 0/);
+  assert.match(errorsOf(event({ maxHold: '1' }))[0].message, /must be seconds, a number >= 0/);
+  assert.match(errorsOf(event({ gain: 0.5 }))[0].message, /unknown key for a trigger node/);
+  assert.match(errorsOf(event({ env: { trigger: 'hit', decay: 1 } }))[0].message, /unknown key for a trigger node/);
+  assert.match(errorsOf(event({ strength: 1 }))[0].message, /unknown key for a trigger node/);
+  assert.match(errorsOf(event({}, { freq: 'hit.level' }))[0].message, /a trigger node has strength$/);
+});
+
+test('validate: env stop is an optional expr in seconds', () => {
+  const env = (e) => recipe([{ id: 'p', type: 'pulse', hold: { len: [0.1, 0.2] } }, { id: 'out', type: 'osc', env: e }]);
+  assert.deepEqual(errorsOf(env({ trigger: 'p', decay: 0.1, stop: 'p.len + 1' })), []);
+  assert.match(errorsOf(env({ trigger: 'p', decay: 0.1, stop: 'p.nope' }))[0].message, /a pulse node has hz, jitter, len$/);
+  assert.match(errorsOf(env({ trigger: 'p', decay: 0.1, stop: [1] }))[0].message, /must be a number or an expr string/);
 });
 
 test('validate: a node may read its own published fields, never its own parameters', () => {

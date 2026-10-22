@@ -15,7 +15,7 @@ const finite = (v) => (Number.isFinite(v) ? Math.min(Math.max(v, -LIMIT), LIMIT)
 
 /**
  * Compiles a recipe for one sample rate. Throws an Error with `.errors` (as `validateRecipe`
- * returns them) if the recipe is invalid. Returns `{ setInput(name, value), render(out), reset() }`.
+ * returns them) if the recipe is invalid. Returns `{ setInput(name, value), trigger(name, strength), render(out), reset() }`.
  */
 export function compileRecipe(recipe, { sampleRate } = {}) {
   const { errors, plan } = analyzeRecipe(recipe);
@@ -49,6 +49,7 @@ export function compileRecipe(recipe, { sampleRate } = {}) {
       decay: n.env && expr(n.env.decay),
       attack: n.env?.attack && expr(n.env.attack),
       length: n.env?.length && expr(n.env.length),
+      stop: n.env?.stop && expr(n.env.stop),
       fieldAt: (BLOCKS[n.type].fields?.(n.node) ?? []).map(field),
     };
   });
@@ -58,7 +59,9 @@ export function compileRecipe(recipe, { sampleRate } = {}) {
   const start = () => {
     const rng = createRng(plan.seed);
     const buffers = new Map(plan.nodes.map((n) => [n.id, new Float32Array(BLOCK)]));
+    const events = Object.create(null);  // node id -> the processor of a block with fire(), as a `trigger` node
     run = {
+      events,
       values: new Float64Array(slots.size),
       first: true,  // the first block after start: every glide starts at its target
       read: BLOCK,  // read position in the output node's block; BLOCK means "compute the next one"
@@ -76,6 +79,7 @@ export function compileRecipe(recipe, { sampleRate } = {}) {
         envTime: Float64Array.of(Infinity),  // silent until the first trigger
       })),
     };
+    for (const node of run.nodes) if (node.processor.fire) events[node.c.n.id] = node.processor;
   };
 
   const step = () => {
@@ -109,14 +113,15 @@ export function compileRecipe(recipe, { sampleRate } = {}) {
       if (c.decay) {
         runExpr(c.decay, values, tmp, 0);
         const decay = Math.max(finite(tmp[0]), 1e-4);
-        let attack = 0, length = 0;  // without them, the level is exp(-time / decay), as before they existed
+        let attack = 0, length = 0, stop = Infinity;  // without them, the level is exp(-time / decay), as before they existed
         if (c.attack) { runExpr(c.attack, values, tmp, 0); attack = Math.max(finite(tmp[0]), 0); }
         if (c.length) { runExpr(c.length, values, tmp, 0); length = Math.max(finite(tmp[0]), 0); }
+        if (c.stop) { runExpr(c.stop, values, tmp, 0); stop = Math.max(finite(tmp[0]), 0); }
         let time = node.envTime[0];
         for (let i = 0; i < BLOCK; i++) {
           if (node.trigger[i] > 0) time = 0;
           time += 1 / sampleRate;  // so time > 0: with attack 0 the rise is 1, with length 0 the decay starts at once
-          out[i] *= gain * ((time < attack ? time / attack : 1) * (time > length ? Math.exp(-(time - length) / decay) : 1));
+          out[i] *= time > stop ? 0 : gain * ((time < attack ? time / attack : 1) * (time > length ? Math.exp(-(time - length) / decay) : 1));
         }
         node.envTime[0] = time;
       } else if (gain !== 1) for (let i = 0; i < BLOCK; i++) out[i] *= gain;
@@ -134,6 +139,15 @@ export function compileRecipe(recipe, { sampleRate } = {}) {
       if (!Number.isFinite(value)) throw new Error(`input "${name}" needs a finite number`);
       inputs[name] = Math.min(Math.max(value, spec.min), spec.max);
     },
+    /**
+     * Fires the event `name` (the id of a `trigger` node) with a strength, clamped to the node's
+     * range. It lands at the start of the next control block. Allocates nothing.
+     */
+    trigger(name, strength) {
+      if (!Object.hasOwn(run.events, name)) throw new Error(`unknown event "${name}" (known: ${Object.keys(run.events).join(', ') || 'none'})`);
+      if (!Number.isFinite(strength)) throw new Error(`event "${name}" needs a finite strength`);
+      run.events[name].fire(strength);
+    },
     /** Fills `out` (a Float32Array of any length) with the next samples. */
     render(out) {
       for (let i = 0; i < out.length; i++) {
@@ -142,7 +156,7 @@ export function compileRecipe(recipe, { sampleRate } = {}) {
       }
       return out;
     },
-    /** Restarts from the state right after compiling; the inputs keep their current values. */
+    /** Restarts from the state right after compiling, pending events cleared; the inputs keep their current values. */
     reset: start,
   };
 }

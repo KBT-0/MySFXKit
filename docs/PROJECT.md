@@ -137,3 +137,7 @@ Its **AÇIK** items (§5.1 format, §7 timings, §9 questions) are OPEN until Ke
   its own parameters, which stay a cycle error. It lets Leeway's horn keep a fixed 0.12 s
   gap between beeps (`spacing: "horn.length + 0.12"`); the alternative was a fixed spacing.
   Decided: 2026-10-22, approved by Kemal ("Evet, kural kalsın", the recommended option).
+- 2.5 DECIDED — a game event (an impact with a strength) is named by the id of its
+  `trigger` node: the recipe holds `{ "id": "impact", "type": "trigger" }` and the game
+  calls `trigger("impact", strength)`. Events are not declared among `inputs`.
+  Decided: 2026-10-22, approved by Kemal ("Tetik düğümünün adı", the recommended option).

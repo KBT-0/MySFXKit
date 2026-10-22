@@ -11,7 +11,7 @@ const isObject = (v) => typeof v === 'object' && v !== null && !Array.isArray(v)
 const bare = (def) => def.trigger || def.control;
 /** The block types whose output is a trigger train: they can drive an `env` or a `sync`. */
 const TRIGGERS = Object.keys(BLOCKS).filter((type) => BLOCKS[type].trigger).join(', ');
-const ENV_KEYS = ['trigger', 'decay', 'attack', 'length'];
+const ENV_KEYS = ['trigger', 'decay', 'attack', 'length', 'stop'];
 
 /**
  * Validates a recipe (parsed JSON). Returns `{ ok, errors }`; each error is
@@ -141,7 +141,7 @@ export function analyzeRecipe(recipe) {
     let env = null;
     if (node.env !== undefined) {
       if (!isObject(node.env) || node.env.trigger === undefined || node.env.decay === undefined || !Object.keys(node.env).every((k) => ENV_KEYS.includes(k))) {
-        report(id, at('env'), 'must be { trigger: <trigger node id>, decay: <seconds> } with optional attack and length, in seconds');
+        report(id, at('env'), 'must be { trigger: <trigger node id>, decay: <seconds> } with optional attack, length and stop, in seconds');
       } else {
         env = { trigger: nodeId(node.env.trigger, 'env.trigger', true) };
         for (const key of ENV_KEYS.slice(1)) if (node.env[key] !== undefined) env[key] = parse(node.env[key], id, at(`env.${key}`), refs);

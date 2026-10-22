@@ -25,6 +25,11 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   Checks, Opus 5.5 high, fresh, Lows in BACKLOG SFX-18): `randomTrigger`, env `attack` and
   `length`, horn and ferry. Manual check owed to Kemal: listen to `horn` and `ferry` beside
   Leeway's city horn and ferry (the tests measure pitch, timing and length, not timbre).
+  Part 3 committed (Opus 5.5 worker sub-agent, high; review round 1 Accept, Opus 5.5 high,
+  fresh, Low in BACKLOG SFX-19): `trigger` block and `instance.trigger(name, strength)`
+  (PROJECT 2.5), `env.stop`, `renderOffline` events, `hull_impact`. The web adapter must
+  forward a port message to `instance.trigger(name, strength)`; event names are the ids of
+  nodes with `type === "trigger"`. Listening check of `hull_impact` owed to Kemal.
   GitHub Pages is live at `https://kbt-0.github.io/MySFXKit/playground/`; pushes rebuild it.
 - SFX-3 (Claude Code, Fable 5.1 lead; Opus 5.5 worker sub-agent, high effort, 2026-10-22):
   playground v0 in `playground/` (paste a recipe, fence stripping, schema errors, Play, one

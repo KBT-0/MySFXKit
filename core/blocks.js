@@ -16,6 +16,8 @@
 //            values of the `fields` names, in their order.
 //            process() runs on an audio thread and allocates nothing: a block keeps its state in
 //            a typed array, since a number stored in a closure variable is boxed on every write.
+//            An optional fire(strength) makes the node a game event named by its id: the
+//            instance's trigger(id, strength) calls it, from an audio thread too, so it allocates nothing.
 
 const TAU = 2 * Math.PI;
 const WAVES = ['sine', 'saw'];
@@ -192,6 +194,41 @@ export const BLOCKS = Object.freeze({
             state[2] = 0;
             out[i] = 1;
           }
+        },
+      };
+    },
+  },
+
+  trigger: {  // a game event, as Leeway's HullImpact.hit: fires when the game calls instance.trigger(<id>, strength)
+    params: {},
+    trigger: true,
+    options: ['range', 'maxHold'],
+    check(node, report) {
+      if (node.range !== undefined && !isRange(node.range)) report('range', 'must be [low, high], two numbers with low <= high');
+      if (node.maxHold !== undefined && !(Number.isFinite(node.maxHold) && node.maxHold >= 0)) report('maxHold', 'must be seconds, a number >= 0');
+    },
+    fields: () => ['strength'],
+    create(node, { sampleRate }) {
+      const [lo, hi] = node.range ?? [0, 1], maxHold = node.maxHold ?? 0;
+      const fields = Float64Array.of(lo);  // [strength]
+      const state = Float64Array.of(0, 0, Infinity);  // [1 if an event is pending, its strength, seconds since the last firing]
+      return {
+        fields,
+        fire(strength) {  // two events before the next control block: the stronger one
+          const s = Math.min(Math.max(strength, lo), hi);
+          state[1] = state[0] ? Math.max(state[1], s) : s;
+          state[0] = 1;
+        },
+        process(p, io, out) {  // the pending event fires at the first sample of the block
+          out.fill(0);
+          if (state[0]) {
+            out[0] = 1;
+            // Leeway's max-hold: an event within maxHold seconds of the last keeps the stronger strength.
+            fields[0] = state[2] <= maxHold ? Math.max(fields[0], state[1]) : state[1];
+            state[0] = 0;
+            state[2] = 0;
+          }
+          state[2] += out.length / sampleRate;
         },
       };
     },

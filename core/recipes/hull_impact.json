@@ -1,0 +1,16 @@
+{
+  "name": "hull_impact",
+  "description": "Leeway's wooden hull meeting a quay (engine/audio/voices.hpp, HullImpact): a deep thud and a short knock, played once per event. The game fires the event with instance.trigger('impact', strength), strength 0 .. 1 (Leeway: the speed lost on grounding). Leeway's numbers: a 45 Hz sine decaying with time constant 0.15 s, plus noise low-passed at 700 Hz, times 3, decaying with time constant 0.05 s; both stop hard 1.2 s after the event; the sum is scaled by the strength, then Leeway's impact 0.9 and master 0.8 into tanh. Leeway's max-hold: an event within 1.2 s of the last keeps the stronger of the two strengths and restarts the sound. Deviations: an event lands at the start of the next 128-sample control block (at most 2.7 ms late at 48 kHz), and the 1.2 s max-hold window is measured in whole control blocks; the knock's low-pass runs all the time, where Leeway's runs only during an impact and resumes from the state the last impact left; the noise comes from this recipe's own generator. Distance and stereo placement (Leeway's boat position) are the adapter's, not this recipe's.",
+  "version": 0,
+  "seed": 41,
+  "nodes": [
+    { "id": "impact", "type": "trigger", "maxHold": 1.2 },
+    { "id": "thud", "type": "osc", "wave": "sine", "freq": 45, "sync": "impact",
+      "env": { "trigger": "impact", "decay": 0.15, "stop": 1.2 } },
+    { "id": "noise", "type": "noise" },
+    { "id": "knock", "type": "lowpass", "in": "noise", "cutoff": 700, "gain": 3,
+      "env": { "trigger": "impact", "decay": 0.05, "stop": 1.2 } },
+    { "id": "hit", "type": "mix", "in": ["thud", "knock"], "gains": ["0.9 * impact.strength", "0.9 * impact.strength"] },
+    { "id": "out", "type": "shape", "in": "hit", "drive": 0.8 }
+  ]
+}

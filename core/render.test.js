@@ -304,3 +304,110 @@ test('ferry: an event at 1 s, a 115 .. 145 Hz saw for 1.8 .. 2.6 s (Leeway CityN
   assert.ok(lengths.every((s) => s >= 1.75 && s <= 2.75), `an event length outside 1.8 .. 2.6 s: ${lengths}`);
   assert.ok(spread(lengths) > 0.2, `every event the same length: ${lengths}`);
 });
+
+// A `trigger` node `hit` drives a 1 kHz sine whose gain is the event's strength.
+const struck = (node = {}, env = {}) => ({
+  name: 'struck', version: 0, seed: 2,
+  nodes: [{ id: 'hit', type: 'trigger', ...node },
+    { id: 'out', type: 'osc', freq: 1000, gain: 'hit.strength', env: { trigger: 'hit', decay: 0.05, ...env } }],
+});
+const firstSound = (b) => b.findIndex((v) => v !== 0);
+const at = (seconds) => Math.round(seconds * RATE);  // a sample index: seconds * RATE need not be a whole number
+
+test('trigger: an event fires at the start of the next control block; its strength scales the level', () => {
+  const instance = compileRecipe(struck(), { sampleRate: RATE });
+  const b = new Float32Array(RATE / 2);
+  instance.render(b.subarray(0, 100));
+  assert.equal(peak(b.subarray(0, 100)), 0, 'sound before any event');
+  instance.trigger('hit', 1);
+  instance.render(b.subarray(100));
+  assert.equal(firstSound(b), 128, 'the event did not land at the next block');
+  const level = (strength, node) => rms(renderOffline(struck(node), { sampleRate: RATE, seconds: 0.2, events: [{ at: 0, name: 'hit', strength }] }));
+  const full = level(1);
+  assert.ok(Math.abs(level(0.5) / full - 0.5) < 1e-3, 'strength 0.5 is not half the level');
+  assert.equal(level(5), full, 'strength above the range is not clamped to 1');
+  assert.equal(level(-3), 0, 'strength below the range is not clamped to 0');
+  assert.ok(Math.abs(level(2, { range: [0, 2] }) / full - 2) < 1e-3, 'a declared range [0, 2] does not allow strength 2');
+});
+
+test('trigger: two events in one block keep the stronger; maxHold keeps the stronger for that long after a firing (Leeway HullImpact.hit)', () => {
+  const second = (node, gap, strengths = [1, 0.2]) => {  // the peak of the sound the second event starts
+    const b = renderOffline(struck(node), { sampleRate: RATE, seconds: gap + 0.1, events: [{ at: 0, name: 'hit', strength: strengths[0] }, { at: gap, name: 'hit', strength: strengths[1] }] });
+    return peak(b.subarray(at(gap) + 128, at(gap) + 128 + 48));  // the first ms after it lands
+  };
+  const strong = peak(renderOffline(struck(), { sampleRate: RATE, seconds: 0.001, events: [{ at: 0, name: 'hit', strength: 1 }] }));
+  assert.equal(second({}, 0, [0.2, 1]), second({}, 0, [1, 0.2]), 'two events in one block: not the same strength in either order');
+  assert.ok(second({}, 0, [0.2, 1]) > 0.85 * strong, 'two events in one block: not the stronger one');
+  assert.ok(second({ maxHold: 0.5 }, 0.3) > 0.9 * strong, 'within maxHold a weak event does not keep the strong strength');
+  assert.ok(second({ maxHold: 0.5 }, 0.7) < 0.25 * strong, 'after maxHold a weak event is not weak');
+  assert.ok(second({}, 0.3) < 0.25 * strong, 'without maxHold a weak event is not weak');
+});
+
+test('trigger: an unknown event or a non-finite strength throws; reset clears a pending event', () => {
+  const instance = compileRecipe(struck(), { sampleRate: RATE });
+  assert.throws(() => instance.trigger('miss', 1), /unknown event "miss" \(known: hit\)/);
+  assert.throws(() => instance.trigger('__proto__', 1), /unknown event/);
+  for (const strength of [NaN, Infinity, undefined, '1']) assert.throws(() => instance.trigger('hit', strength), /needs a finite strength/);
+  assert.throws(() => compileRecipe(diesel, { sampleRate: RATE }).trigger('fire', 1), /known: none/);
+  instance.trigger('hit', 1);
+  instance.reset();
+  assert.equal(peak(instance.render(new Float32Array(RATE / 10))), 0, 'a pending event survived reset');
+  instance.trigger('hit', 1);
+  assert.ok(peak(instance.render(new Float32Array(128))) > 0.5, 'an event after reset does not fire');
+});
+
+test('env stop: the level is 0 from stop seconds after each firing', () => {
+  const b = clean(renderOffline(struck({}, { decay: 10, stop: 0.3 }), { sampleRate: RATE, seconds: 1.5, events: [{ at: 0, name: 'hit', strength: 1 }, { at: 0.8, name: 'hit', strength: 1 }] }));
+  const second = Math.ceil(0.8 * RATE / 128) * 128;
+  assert.ok(rms(b, at(0.29), at(0.3)) > 0.6, 'quiet before stop');
+  assert.equal(peak(b.subarray(at(0.3) + 1, second)), 0, 'sound after stop');
+  assert.ok(rms(b, second, second + at(0.01)) > 0.6, 'a later firing does not restart it');
+  assert.equal(peak(b.subarray(second + at(0.3) + 1)), 0, 'sound after the second stop');
+});
+
+test('renderOffline events: the same as trigger calls between renders; unsorted is sorted; a bad event throws', () => {
+  const events = [{ at: 0.3, name: 'hit', strength: 0.4 }, { at: 0.1, name: 'hit', strength: 0.9 }];
+  const b = renderOffline(struck(), { sampleRate: RATE, seconds: 0.5, events });
+  const instance = compileRecipe(struck(), { sampleRate: RATE }), c = new Float32Array(b.length);
+  instance.render(c.subarray(0, at(0.1)));
+  instance.trigger('hit', 0.9);
+  instance.render(c.subarray(at(0.1), at(0.3)));
+  instance.trigger('hit', 0.4);
+  instance.render(c.subarray(at(0.3)));
+  assert.deepEqual(b, c);
+  for (const bad of [[{ at: -1, name: 'hit', strength: 1 }], [{ name: 'hit', strength: 1 }], [null], 'hit']) {
+    assert.throws(() => renderOffline(struck(), { seconds: 0.1, events: bad }), /at >= 0 seconds/);
+  }
+  assert.throws(() => renderOffline(struck(), { seconds: 0.1, events: [{ at: 0, name: 'miss', strength: 1 }] }), /unknown event/);
+});
+
+const hullImpact = JSON.parse(readFileSync(new URL('./recipes/hull_impact.json', import.meta.url), 'utf8'));
+const impact = (strength, seconds = 2.5, more = []) => clean(renderOffline(hullImpact, { sampleRate: RATE, seconds, events: [{ at: 0.5, name: 'impact', strength }, ...more] }));
+const LANDS = Math.ceil(0.5 * RATE / 128) * 128;  // the event at 0.5 s lands at the next control block
+
+test('hull_impact: an event at 0.5 s sounds for 1.2 s and is silent before and after; bit-identical twice (Leeway HullImpact)', () => {
+  const b = impact(1);
+  assert.deepEqual(impact(1), b);
+  assert.equal(peak(b.subarray(0, LANDS)), 0, 'sound before the event');
+  assert.ok(rms(b, LANDS, LANDS + at(0.1)) > 0.1, 'the impact is not audible');
+  assert.equal(peak(b.subarray(LANDS + at(1.2))), 0, 'sound 1.2 s after the event');
+  assert.ok(peak(b.subarray(LANDS + at(1.1), LANDS + at(1.2))) > 0, 'the impact stops before 1.2 s');
+});
+
+test('hull_impact: a stronger impact is louder; an event within 1.2 s keeps the stronger strength', () => {
+  const levels = [0.1, 0.3, 0.6, 1].map((s) => rms(impact(s, 1.5)));
+  assert.ok(levels.every((l, k) => k === 0 || l > 1.3 * levels[k - 1]), `not louder with strength: ${levels}`);
+  const again = impact(1, 2.5, [{ at: 1, name: 'impact', strength: 0.1 }]), from = Math.ceil(RATE / 128) * 128;
+  assert.ok(rms(again, from, from + at(0.1)) > 0.9 * rms(impact(1), LANDS, LANDS + at(0.1)), 'a weak impact 0.5 s after a strong one is weak');
+  assert.equal(peak(again.subarray(from + at(1.2))), 0, 'the second impact does not stop 1.2 s after it');
+});
+
+test('hull_impact: a bright knock first, then a 45 Hz thud decaying with time constant 0.15 s (Leeway HullImpact)', () => {
+  const b = impact(0.5), s = (t) => LANDS + Math.round(t * RATE);
+  const knock = brightness(b.subarray(s(0), s(0.02))), thud = brightness(b.subarray(s(0.2), s(0.4)));
+  assert.ok(knock > 3 * thud, `the knock is not brighter than the thud: ${knock} vs ${thud}`);
+  const pitch = spectralPeak(b, RATE, 20, 200, s(0.2), s(0.6));
+  assert.ok(Math.abs(pitch - 45) <= 2, `thud at ${pitch} Hz`);
+  const tau = 0.2 / Math.log(rms(b, s(0.2), s(0.4)) / rms(b, s(0.4), s(0.6)));  // 0.2 s = 9 cycles of 45 Hz
+  assert.ok(Math.abs(tau - 0.15) < 0.15 * 0.15, `thud time constant ${tau} s`);
+});
