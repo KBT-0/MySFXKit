@@ -4,7 +4,7 @@ import { validateRecipe } from '../../core/index.js';
 
 /**
  * Loads the worklet into `audioContext` and returns a player:
- * `{ node, load(recipe), setInput(name, value), reset(), onError(callback) }`.
+ * `{ node, load(recipe), setInput(name, value), trigger(name, strength), reset(), onError(callback) }`.
  * `node` is a mono AudioWorkletNode the caller connects to the destination or a spatial chain.
  */
 export async function createRecipePlayer(audioContext) {
@@ -32,6 +32,8 @@ export async function createRecipePlayer(audioContext) {
     },
     /** Sets a game input; an unknown name or a non-finite value is reported through onError. */
     setInput(name, value) { node.port.postMessage({ type: 'input', name, value }); },
+    /** Fires the game event `name` (a `trigger` node's id); an unknown name or a non-finite strength is reported through onError. */
+    trigger(name, strength) { node.port.postMessage({ type: 'trigger', name, strength }); },
     /** Restarts the recipe from its compiled state; inputs keep their values. */
     reset() { node.port.postMessage({ type: 'reset' }); },
     /** Calls `callback(errors)` for every error the audio thread reports. */

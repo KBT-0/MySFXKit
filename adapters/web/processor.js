@@ -22,6 +22,7 @@ class RecipeProcessor extends AudioWorkletProcessor {
           this.instance = compileRecipe(message.recipe, { sampleRate: this.rate });
           break;
         case 'input': this.instance?.setInput(message.name, message.value); break;
+        case 'trigger': this.instance?.trigger(message.name, message.strength); break;
         case 'reset': this.instance?.reset(); break;
         default: break;
       }

@@ -13,6 +13,7 @@ await import('./processor.js');  // after the shim; a static import would run fi
 
 const RATE = 48000;
 const diesel = JSON.parse(readFileSync(new URL('../../core/recipes/diesel.json', import.meta.url), 'utf8'));
+const hullImpact = JSON.parse(readFileSync(new URL('../../core/recipes/hull_impact.json', import.meta.url), 'utf8'));
 const loud = { name: 'loud', version: 0, seed: 1, inputs: {}, params: {},
   nodes: [{ id: 'out', type: 'osc', freq: 220, gain: 5 }] };
 
@@ -87,6 +88,45 @@ test('an unknown input posts an error and keeps playing', () => {
   assert.equal(p.port.sent.length, 1);
   assert.match(p.port.sent[0].errors[0].message, /unknown input "speed"/);
   assert.ok(rms(play(p, 0.5)) > 0.01);
+});
+
+test('a trigger fires the event: silent before, audible after', () => {
+  const p = make();
+  send(p, { type: 'recipe', recipe: hullImpact });
+  assert.equal(peak(play(p, 0.2)), 0);
+  send(p, { type: 'trigger', name: 'impact', strength: 1 });
+  const hit = play(p, 0.3);
+  assert.ok(hit.every(Number.isFinite) && rms(hit) > 0.01, `rms ${rms(hit)}`);
+  assert.deepEqual(p.port.sent, []);
+});
+
+test('a trigger before any recipe is ignored', () => {
+  const p = make();
+  send(p, { type: 'trigger', name: 'impact', strength: 1 });
+  assert.deepEqual(p.port.sent, []);
+  assert.equal(peak(play(p, 0.1)), 0);
+});
+
+test('an unknown event posts an error and keeps playing', () => {
+  const p = make();
+  send(p, { type: 'recipe', recipe: diesel });
+  send(p, { type: 'trigger', name: 'impact', strength: 1 });
+  assert.equal(p.port.sent.length, 1);
+  assert.equal(p.port.sent[0].type, 'error');
+  assert.match(p.port.sent[0].errors[0].message, /unknown event "impact"/);
+  assert.ok(rms(play(p, 0.5)) > 0.01);
+});
+
+test('a non-finite strength posts an error and keeps the recipe', () => {
+  const p = make();
+  send(p, { type: 'recipe', recipe: hullImpact });
+  send(p, { type: 'trigger', name: 'impact', strength: NaN });
+  assert.equal(p.port.sent.length, 1);
+  assert.match(p.port.sent[0].errors[0].message, /finite strength/);
+  assert.equal(peak(play(p, 0.1)), 0);
+  send(p, { type: 'trigger', name: 'impact', strength: 1 });
+  assert.ok(rms(play(p, 0.3)) > 0.01);
+  assert.equal(p.port.sent.length, 1);
 });
 
 test('reset restarts the recipe', () => {

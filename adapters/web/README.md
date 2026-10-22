@@ -13,13 +13,14 @@ imports (`index.js` and `processor.js` import `../../core/index.js`).
 | `player.node` | the `AudioWorkletNode` (no input, one mono output); connect it to `audioContext.destination` or a spatial chain |
 | `player.load(recipe)` | validates the parsed recipe with `validateRecipe` on the main thread; rejects with an `Error` carrying `.errors` (as `validateRecipe` returns them), else sends it to the audio thread |
 | `player.setInput(name, value)` | sets a game input; an unknown name or a non-finite value comes back through `onError` |
+| `player.trigger(name, strength)` | fires the game event `name`, the id of a `trigger` node in the recipe, with `strength` clamped to the node's `range`; it lands at the start of the next 128-sample block; an unknown name or a non-finite strength comes back through `onError` |
 | `player.reset()` | restarts the recipe from its compiled state; inputs keep their values |
 | `player.onError(callback)` | calls `callback(errors)` for each error the audio thread reports; `errors` is `[{ node, path, message }]` |
 
 The caller parses recipe text with `JSON.parse`; this module never parses or runs recipe text.
 
-Inputs belong to the loaded recipe: a `setInput` before the first `load` is ignored, and each
-`load` starts every input at its default. Set the inputs again after `load`.
+Inputs belong to the loaded recipe: a `setInput` or a `trigger` before the first `load` is
+ignored, and each `load` starts every input at its default. Set the inputs again after `load`.
 
 ## Message protocol (`player.node.port`)
 
@@ -27,6 +28,7 @@ Inputs belong to the loaded recipe: a `setInput` before the first `load` is igno
 |---|---|---|
 | to the worklet | `{ type: "recipe", recipe }` | compiles it with `compileRecipe` at the context's sample rate; invalid: an error message, then silence |
 | to the worklet | `{ type: "input", name, value }` | `instance.setInput`; a bad name or value: an error message, the sound keeps playing |
+| to the worklet | `{ type: "trigger", name, strength }` | `instance.trigger`; a bad name or strength: an error message, the sound keeps playing |
 | to the worklet | `{ type: "reset" }` | `instance.reset()` |
 | from the worklet | `{ type: "error", errors }` | `errors` is `[{ node, path, message }]`; an exception during rendering is reported once and the processor stays silent until the next recipe |
 

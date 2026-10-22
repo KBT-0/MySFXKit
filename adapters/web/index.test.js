@@ -37,6 +37,12 @@ test('load posts a valid recipe; setInput and reset post their messages', async 
   ]);
 });
 
+test('trigger posts its message', async () => {
+  const player = await createRecipePlayer(fakeContext());
+  player.trigger('impact', 0.7);
+  assert.deepEqual(player.node.port.sent, [{ type: 'trigger', name: 'impact', strength: 0.7 }]);
+});
+
 test('load rejects an invalid recipe with its errors and posts nothing', async () => {
   const player = await createRecipePlayer(fakeContext());
   await assert.rejects(player.load({ name: 'broken' }), (error) => error.errors.length > 0);

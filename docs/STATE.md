@@ -27,9 +27,10 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   Leeway's city horn and ferry (the tests measure pitch, timing and length, not timbre).
   Part 3 committed (Opus 5.5 worker sub-agent, high; review round 1 Accept, Opus 5.5 high,
   fresh, Low in BACKLOG SFX-19): `trigger` block and `instance.trigger(name, strength)`
-  (PROJECT 2.5), `env.stop`, `renderOffline` events, `hull_impact`. The web adapter must
-  forward a port message to `instance.trigger(name, strength)`; event names are the ids of
-  nodes with `type === "trigger"`. Listening check of `hull_impact` owed to Kemal.
+  (PROJECT 2.5), `env.stop`, `renderOffline` events, `hull_impact`. Listening check of
+  `hull_impact` owed to Kemal. The web adapter forwards events: `player.trigger(name,
+  strength)` (Opus 5.5 worker sub-agent, high; review Accept, Opus 5.5 high, fresh; Low in
+  BACKLOG SFX-22). Event names are the ids of nodes with `type === "trigger"`.
   Part 4 committed (Opus 5.5 worker sub-agent, high, one compaction; review round 1 Accept
   with Manual Checks with one Medium fixed by the author in the docs, round 2 Accept, both
   Opus 5.5 high, fresh; Lows in BACKLOG SFX-21): `sequence` with weighted `variants`
