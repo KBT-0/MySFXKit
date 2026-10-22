@@ -12,12 +12,13 @@ expect() {  # expect <red|green> <the check's FAIL line, or -> <path> <line of t
     red:*) case "$out" in *"$2"*) ;; *) printf '%s\n' "FAIL: $3 is red without '$2': $out"; status=1 ;; esac ;;
   esac
 }
-expect red 'FAIL [boundary]: the playground evaluates text as code' playground/app.js 'const f = eval(recipeText);'
-expect red 'FAIL [boundary]: the playground evaluates text as code' playground/app.js 'const f = new Function("return " + recipeText);'
-expect red 'FAIL [boundary]: the playground evaluates text as code' playground/app.ts 'Function("return " + t)()'
-expect red 'FAIL [boundary]: the playground evaluates text as code' playground/app.ts 'eval (t)'
-expect red 'FAIL [boundary]: the playground evaluates text as code' playground/app.ts '(0, eval)(t)'
-expect red 'FAIL [boundary]: the playground evaluates text as code' playground/index.html 'const m = await import(recipeUrl);'
+expect red 'FAIL [boundary]: playground/ evaluates text as code' playground/app.js 'const f = eval(recipeText);'
+expect red 'FAIL [boundary]: playground/ evaluates text as code' playground/app.js 'const f = new Function("return " + recipeText);'
+expect red 'FAIL [boundary]: playground/ evaluates text as code' playground/app.ts 'Function("return " + t)()'
+expect red 'FAIL [boundary]: playground/ evaluates text as code' playground/app.ts 'eval (t)'
+expect red 'FAIL [boundary]: playground/ evaluates text as code' playground/app.ts '(0, eval)(t)'
+expect red 'FAIL [boundary]: playground/ evaluates text as code' playground/index.html 'const m = await import(recipeUrl);'
+expect red 'FAIL [boundary]: core/ evaluates text as code' core/x.js 'const f = eval(recipeText);'
 expect green - adapters/web/dev_only.js 'const f = eval(x);'
 expect green - playground/search.js 'const r = retrieval(q);'
 expect red 'FAIL [boundary]: core imports an adapter or the playground' core/graph.js "import { play } from '../adapters/web/index.js';"

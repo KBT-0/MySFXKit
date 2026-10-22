@@ -28,6 +28,8 @@ BOUNDARIES = [
     #  "the domain layer must not depend on the delivery layer"),
     ("/playground/", (".js", ".mjs", ".ts", ".html"), ("eval(", "eval (", "Function(", "import("),
      "the playground never executes pasted text as code (recipes are data)"),
+    ("/core/", (".js", ".mjs", ".ts"), ("eval(", "eval (", "Function(", "import("),
+     "core never executes a recipe as code (recipes are data)"),
     ("/core/", (".js", ".mjs", ".ts"), ("adapters/", "playground/"),
      "core is engine-free: it imports no adapter and not the playground"),
 ]

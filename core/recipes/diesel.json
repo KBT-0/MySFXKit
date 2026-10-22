@@ -1,0 +1,25 @@
+{
+  "name": "diesel",
+  "description": "Leeway's single-cylinder four-stroke diesel (engine/audio/voices.hpp, Diesel): one exhaust thump per firing, each a little different, louder and brighter under load.",
+  "version": 0,
+  "seed": 7,
+  "inputs": { "throttle": { "min": -1, "max": 1, "default": 0 } },
+  "params": {
+    "load": { "slew": "1 / 1.2", "rate": "abs(throttle)" },
+    "firing": "4.5 + 8.5 * load"
+  },
+  "nodes": [
+    { "id": "fire", "type": "pulse", "hz": "firing", "jitter": 0.03, "hold": { "gain": [0.7, 1.0] } },
+    { "id": "body", "type": "osc", "wave": "sine", "freq": "52 + 18 * load", "sync": "fire",
+      "env": { "trigger": "fire", "decay": "0.045 - 0.015 * load" } },
+    { "id": "noise", "type": "noise" },
+    { "id": "chuff", "type": "lowpass", "in": "noise", "cutoff": "500 + 1500 * load",
+      "env": { "trigger": "fire", "decay": 0.025 } },
+    { "id": "hum", "type": "osc", "wave": "sine", "freq": "2 * firing", "sync": "fire", "gain": 0.08 },
+    { "id": "engine", "type": "mix", "in": ["body", "chuff", "hum"],
+      "gains": ["0.35 * fire.gain * (0.5 + 0.5 * load)",
+                "0.35 * fire.gain * (0.5 + 0.5 * load) * (1.5 + 2 * load)",
+                0.35] },
+    { "id": "out", "type": "shape", "in": "engine", "drive": 0.8 }
+  ]
+}

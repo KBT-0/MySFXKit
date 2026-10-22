@@ -42,8 +42,9 @@ setup/       the kit's setup interview (kit-owned)
 .githooks/   pre-commit, commit-msg, pre-merge-commit, post-merge (kit-owned)
 .github/     CI, which runs scripts/check.sh
 
-Planned, created after the §5.1 decision (brief §5): core/ adapters/ skill/ playground/,
-later mcp/ and providers/.
+core/        the recipe model, validator, expr language, blocks, offline renderer (core/README.md)
+
+Planned (brief §5): adapters/ skill/ playground/, later mcp/ and providers/.
 ```
 
 Two documentation subdirectories exist for process output rather than design:
@@ -64,15 +65,16 @@ Each module: its own folder, its own project/build unit, its own README summaris
 public API, its own tests (a kit choice; no study measured this layout). Modules see each
 other ONLY through public contracts.
 
-No module exists yet. The planned layout is brief §5, created after the §5.1 format
-decision; each module then gets a row here, its own README and its own tests.
+The layout is brief §5. A planned module gets a row here, its own README and its own tests
+when it is created. No gate checks this table yet: `module_roots` in `scripts/check.sh` stays
+empty until a second top-level module exists.
 
-| Module (planned) | Responsibility |
+| Module | Responsibility |
 |---|---|
-| `core/` | Engine-free DSP blocks, the recipe model, the recipe library ported from Leeway |
-| `adapters/` | One folder per engine: web (WebAudio), raylib/C++, Unity … |
-| `skill/` | The agent's workflow instructions |
-| `playground/` | The static site (brief §6) |
+| `core/` | Engine-free recipe model (format B, PROJECT §2.2): validator, expr language, block registry, interpreter, offline renderer, and the recipe library ported from Leeway as data (`core/recipes/`); `node --test core/` |
+| `adapters/` (planned) | One folder per engine: web (WebAudio), raylib/C++, Unity … |
+| `skill/` (planned) | The agent's workflow instructions |
+| `playground/` (planned) | The static site (brief §6) |
 
 <!-- One table per top-level area. Columns: Module | Responsibility | (optional) the design
      document section it implements. One line each — this is a map, not documentation; a
@@ -87,8 +89,8 @@ does. A boundary enforced only by prose is a request, and requests decay; the po
 section is to make that distinction visible rather than to imply it away. An honest gap gets
 closed. A gap everyone assumes is covered does not.
 
-1. The playground never executes pasted text as code (`eval`, `new Function`): a grep in `scripts/boundary_checks.sh`, mirrored by `.claude/hooks/guard_boundaries.py`; DORMANT until `playground/` exists (it prints a NOTE).
-2. `core/` imports no adapter and not the playground: a grep in `scripts/boundary_checks.sh`, mirrored by the same hook; DORMANT until `core/` exists.
+1. The playground and `core/` never execute pasted text as code (`eval`, `new Function`): a grep in `scripts/boundary_checks.sh`, mirrored for the playground by `.claude/hooks/guard_boundaries.py`; armed for `core/`, DORMANT for `playground/` until it exists (it prints a NOTE).
+2. `core/` imports no adapter and not the playground: a grep in `scripts/boundary_checks.sh`, mirrored by the same hook; armed since `core/` exists.
 3. Adapters never redefine a block's meaning: not enforced (only the core's tests, once they exist).
 4. `../project_leeway` (on this Mac: `../MyGameEngine_Projects/project_leeway`) is read-only: no file is written there and no version-control command runs there — not enforced; a rule in `AGENTS.md`.
 5. No server, no LLM call from the site: not enforced; brief §2 KARAR.

@@ -16,11 +16,16 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   agent, without the interview conversation, on Kemal's instruction to do the whole setup
   alone. Every value is therefore a transcription of the brief or an agent default that Kemal
   has not confirmed; the defaults are listed under "Blocked / waiting on Kemal".
-- Phase 1 of the brief (analysis of §5.1, A/B/C, prior art, work breakdown): written to
-  `docs/research/2026-10-22-format-evaluation.md` by the same session; the decision is Kemal's.
-- Handed off (Claude Code, Fable 5.1, 2026-10-22): the setup session ended at 202k context;
-  the next lead session starts from `docs/handoffs/2026-10-22-lead-handoff.md` (SFX-1, then
-  SFX-2). Delete this line and the handoff file when that session has read them.
+- SFX-2 (Claude Code, Fable 5.1 lead; Opus 5.5 worker sub-agent, high effort, 2026-10-22):
+  step 1 of 3 done and committed: `core/` (recipe model, expr parser, interpreter, offline
+  renderer, diesel recipe, 24 seeded tests), `node --test core/` in the gate, Node 26 in CI,
+  the eval boundary check armed for `core/`. Review: round 1 Reject (Opus 5.5, high, fresh;
+  one High, three Medium, all fixed by the worker), round 2 Accept (Opus 5.5, high, fresh).
+  Step 2 next: the AudioWorklet adapter in `adapters/web/`; step 3: a bare page with a
+  throttle slider, checked in Safari and Chrome on this Mac.
+  Manual check owed to Kemal: Node 26 must be installed on the lecture Mac and on the PATH
+  that a git hook sees (`node --version`); CI on ubuntu with Node 26 has not run yet, the
+  first push shows it.
 
 (task + module + status, or one line per operation pointing at its `docs/<OPERATION>.md`;
 delete when done — an EMPTY section means nothing is in flight, so never park closed work
@@ -39,7 +44,6 @@ here; that meaning is a contract the gate does not check)
      Claude Max accounts of brief §8; working mode `solo`.
   5. `scripts/boundary_checks.sh`: two DORMANT checks (no `eval` in `playground/`, no adapter
      import in `core/`), written before the §5.1 decision; their folder names follow brief §5.
-- The §5.1 format decision (A / B / C): Kemal decides after reading the evaluation.
 - The brief's open questions §9 (lecture length, students' computers, name, licence, Steam cases).
 
 ## Known issues / watch out
@@ -57,8 +61,7 @@ observed yet.
   `require (` and bare `adapters/` specifiers; fixtures added) and finding 5 (the hook now
   also watches `.mjs`, `.ts`, `.html`); the fixtures and `check.sh` PASS after the fix.
   Manual checks owed to Kemal:
-  1. The no-`eval` rule in `AGENTS.md` already rules out brief option A (code) for the
-     playground while §5.1 is still OPEN. Confirm the rule, or reword it as conditional.
+  1. (closed by the §5.1 decision for B, 2026-10-22: the no-`eval` rule stands as written.)
   2. The phase order in `docs/PHASES.md` (adapters, then MCP/providers, then music) is the
      agent's reading of brief §8, which lists them unordered. Confirm or reorder.
   3. Leeway read-only is prose only. The reviewer suggests a `permissions.deny` Edit/Write

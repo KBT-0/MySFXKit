@@ -23,5 +23,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The core's tests run on Node (node --test core/); the gate's toolchain_path is macOS-only.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+
       - name: Run gates
         run: ./scripts/check.sh

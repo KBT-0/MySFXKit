@@ -122,8 +122,13 @@ Its **AÇIK** items (§5.1 format, §7 timings, §9 questions) are OPEN until Ke
 - 2.1 OPEN — kit feedback upstream. `AGENTS.md` carries the "offer, ask each time" rule as an
   agent default mirroring Leeway (where Kemal sends kit findings upstream through
   `/myagentkit:kit-feedback`). Kemal confirms or declines; then this row becomes DECIDED.
-- 2.2 OPEN — the sound recipe format (brief §5.1). Evaluation:
-  `docs/research/2026-10-22-format-evaluation.md`.
+- 2.2 DECIDED — the sound recipe format (brief §5.1) is **B**: a declarative recipe (data,
+  never code) with parsed exprs on parameters, four control blocks (`pulse`, `trigger`,
+  `randomTrigger`, `sequence`/`choose`) and a web adapter that runs the same interpreter in an
+  AudioWorklet. Evaluation: `docs/research/2026-10-22-format-evaluation.md` §4. Faust stays a
+  later export target; `custom` blocks come only from the bundled library.
+  Decided: 2026-10-22, Kemal chose "B: bildirimsel + expr + 4 kontrol bloğu + AudioWorklet",
+  the recommended option, in chat.
 - 2.3 DECIDED — `KBT-0/MySFXKit` is a **public** repository from day one, so GitHub Pages can
   host the playground; the licence file (brief §9, MIT proposed) is still OPEN.
   Decided: 2026-10-22, approved by Kemal (he made it public himself).
