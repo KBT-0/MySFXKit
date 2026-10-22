@@ -11,12 +11,12 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
 
 ## Active work
 
-- Handed off (Claude Code, Fable 5.1, 2026-10-22, evening): this lead session ended at
-  218k context after the format decision, SFX-2 and SFX-3; the next lead session starts from
-  `docs/handoffs/2026-10-22-lead-handoff-2.md` (SFX-5 recipes, then SFX-4 the deck). Delete
-  this line and the handoff file when that session has read them. GitHub Pages is live at
-  `https://kbt-0.github.io/MySFXKit/playground/` (Kemal enabled it; a build was triggered
-  once by API, later pushes rebuild it).
+- SFX-5 (Claude Code, Opus 5.5 lead, 2026-10-22, lead session 3): in flight as four
+  sequential worker tasks in `core/`, each with one fresh review and its own commit:
+  (1) `lfo` + `randomWalk`, hull water and city bed; (2) `randomTrigger` + attack/release
+  envelope, horn and ferry; (3) `trigger` event input, hull impact; (4) `sequence`/`choose`,
+  gull. A fifth task in `playground/` then adds the examples and an impact trigger button.
+  GitHub Pages is live at `https://kbt-0.github.io/MySFXKit/playground/`; pushes rebuild it.
 - SFX-3 (Claude Code, Fable 5.1 lead; Opus 5.5 worker sub-agent, high effort, 2026-10-22):
   playground v0 in `playground/` (paste a recipe, fence stripping, schema errors, Play, one
   slider per recipe input, the bundled diesel), served from the repository root so GitHub
