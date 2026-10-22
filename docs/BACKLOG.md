@@ -9,7 +9,6 @@ When work on a task starts, its line moves to `docs/STATE.md` and leaves this fi
 ## Next tasks (priority order)
 
 - SFX-2: core recipe model + WebAudio adapter + first Leeway recipe (diesel) playing in the browser.
-- SFX-3: playground v0 on GitHub Pages (paste recipe → play; sliders), Safari + Chrome on the Mac.
 - SFX-4: presentation draft (deadline 2026-10-29, end of week 1).
 - SFX-5: remaining Leeway recipes: hull water, hull impact, gull, city noise, horn / ferry whistle.
 - SFX-6: 2D listener scene, WAV export, bundled classic examples (UI click, jump, explosion, wind).
@@ -23,6 +22,7 @@ When work on a task starts, its line moves to `docs/STATE.md` and leaves this fi
 - SFX-13: `adapters/web/`: `errorsOf` in `processor.js` dies on `throw undefined` (unreachable today); no `dispose()` on the player; inputs restart at defaults on each `load`; no fixture test guards the `adapters/web/` part of `build_test_cmd`; decide whether `GUARDED_EVAL` should cover `adapters/` (the test's own `await import()` needs an exemption). Lows from the 2026-10-22 adapter review.
 - SFX-14: a gate fixture that makes `build_test_cmd` fail when a module's test files are absent; and `module_roots` once two top-level modules exist (see SFX-11).
 - SFX-15: `core/alloc.test.js` charges the profiler's own `session.post` cost to the budget because `CORE` includes the test file; exclude `*.test.js` from the counted frames. The pulse block still allocates a boxed double per firing (`rng.next()` on the cold branch, about 6 KB per 10 s); either name the exception in `core/README.md` or draw without a returned double. Lows from the 2026-10-22 allocation review.
+- SFX-16: playground Lows (2026-10-22 reviews): a `{` in prose before the JSON wins extraction (first balanced block, by spec); the `textContent`-only rule of `playground/AGENTS.md` has no gate (add "not enforced" to ARCHITECTURE or a grep with a red fixture); the eval check scans Markdown and JSON under `core/` and `playground/` (write `eval` in backticks; one NOTE in each AGENTS.md); `guard_boundaries.py` matches tokens as substrings (`retrieval(` warns) and a parent folder named `core` would match everything; the header comment of `scripts/boundary_checks.sh` still says DORMANT; `checkout@v4`/`setup-node@v4` run on the Node 20 actions runtime GitHub retires in 2026, bump the majors.
 
 ## Deferred / parked
 

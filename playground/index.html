@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MySFXKit Playground</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>MySFXKit Playground</h1>
+  <p class="row">
+    <label for="examples">Example</label>
+    <select id="examples"><option value="">Choose an example</option></select>
+  </p>
+  <label for="recipe">Paste a recipe (JSON, or the whole reply of your AI)</label>
+  <textarea id="recipe" rows="14" spellcheck="false" autocomplete="off"></textarea>
+  <p class="row">
+    <button id="load" type="button">Load</button>
+    <button id="play" type="button">Play</button>
+  </p>
+  <p id="status" role="status" aria-live="polite"></p>
+  <ul id="errors" aria-live="polite"></ul>
+  <div id="inputs"></div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

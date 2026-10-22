@@ -11,6 +11,30 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
 
 ## Active work
 
+- SFX-3 (Claude Code, Fable 5.1 lead; Opus 5.5 worker sub-agent, high effort, 2026-10-22):
+  playground v0 in `playground/` (paste a recipe, fence stripping, schema errors, Play, one
+  slider per recipe input, the bundled diesel), served from the repository root so GitHub
+  Pages can host it. Kemal enables Pages once (Settings, Pages, branch `main`, folder root)
+  when the folder lands. High tier (the gate line changed): two fresh reviews, logic and
+  portability (Opus 5.5, high, one after the other), both Accept with Manual Checks; Lows
+  in BACKLOG SFX-16. Waiting on Kemal reading the ten-line summary and the diff before the
+  commit. Manual checks owed to Kemal, in Safari from `python3 -m http.server 8000` at the
+  repository root, `http://localhost:8000/playground/`:
+  1. Pick the diesel example, press Play: sound starts on that first click, the button
+     reads Stop, the throttle slider changes the sound.
+  2. Load an invalid recipe while a sound plays: the errors list one line per error, the
+     old sound and sliders stay.
+  3. Load a valid edited recipe while a sound plays: the sound switches and the sliders
+     are rebuilt.
+  4. After enabling Pages (Settings, Pages, branch `main`, folder root), open
+     `https://kbt-0.github.io/MySFXKit/playground/`: the example and the worklet load.
+  Chrome is not installed on this Mac; the Chrome checks stay open.
+- The three earlier commits of today (`547ad4c`, `8c80ed8`, `eeb50a5`) changed gate and CI
+  lines and got one reviewer each, not the high tier's two; the portability review of
+  2026-10-22 covered their gate and CI lines after the fact (Accept with Manual Checks, one
+  Medium: `doctor.sh` checks Node only with `.nvmrc` or a root `package.json`; fixed by
+  adding `.nvmrc` with `26` and updating `docs/DEV_SETUP.md` §2 in the next commit).
+
 - Setup (Claude Code, Fable 5.1, 2026-10-22): the kit v0.12.1 was installed with the
   `claude-code` overlay and every placeholder was filled from `docs/MySFXKit_brief.md` by the
   agent, without the interview conversation, on Kemal's instruction to do the whole setup

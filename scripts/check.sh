@@ -896,7 +896,7 @@ fi
 # `permissions.allow` entry such as `Bash(npm run check)`, code.claude.com/docs/en/permissions),
 # or move the step to its own CI job.
 # read-only: (none)
-build_test_cmd="sh tests/boundary_checks_test.sh && ls core/*.test.js adapters/web/*.test.js >/dev/null && node --test core/ adapters/web/"
+build_test_cmd="sh tests/boundary_checks_test.sh && ls core/*.test.js adapters/web/*.test.js playground/*.test.js >/dev/null && node --test core/ adapters/web/ playground/"
 # A commit that changes only documentation skips the build/test command, and nothing else:
 # every scan and check above has run. A project's gate built for minutes on every such commit.
 # 1: on. 0: off, for a project whose build reads markdown everywhere (a documentation site).

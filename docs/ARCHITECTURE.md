@@ -44,8 +44,9 @@ setup/       the kit's setup interview (kit-owned)
 
 core/        the recipe model, validator, expr language, blocks, offline renderer (core/README.md)
 adapters/    one folder per engine; adapters/web/ runs core in an AudioWorklet (adapters/web/README.md)
+playground/  the static site of brief §6: paste, load, play, sliders (playground/README.md)
 
-Planned (brief §5): more adapters, skill/ playground/, later mcp/ and providers/.
+Planned (brief §5): more adapters, skill/, later mcp/ and providers/.
 ```
 
 Two documentation subdirectories exist for process output rather than design:
@@ -75,7 +76,7 @@ empty until a second top-level module exists.
 | `core/` | Engine-free recipe model (format B, PROJECT §2.2): validator, expr language, block registry, interpreter, offline renderer, and the recipe library ported from Leeway as data (`core/recipes/`); `node --test core/` |
 | `adapters/` | One folder per engine. `adapters/web/`: the WebAudio adapter, the core interpreter in an AudioWorklet (PROJECT §2.2), and a demo page; `node --test adapters/web/`. Planned: raylib/C++, Unity … |
 | `skill/` (planned) | The agent's workflow instructions |
-| `playground/` (planned) | The static site (brief §6) |
+| `playground/` | The static site of brief §6, version 0: paste a recipe, validate it with core, play it through `adapters/web/`, one slider per input, bundled examples (`playground/examples.js`); `node --test playground/` |
 
 <!-- One table per top-level area. Columns: Module | Responsibility | (optional) the design
      document section it implements. One line each — this is a map, not documentation; a
@@ -90,7 +91,7 @@ does. A boundary enforced only by prose is a request, and requests decay; the po
 section is to make that distinction visible rather than to imply it away. An honest gap gets
 closed. A gap everyone assumes is covered does not.
 
-1. The playground and `core/` never execute pasted text as code (`eval`, `new Function`): a grep in `scripts/boundary_checks.sh`, mirrored for the playground by `.claude/hooks/guard_boundaries.py`; armed for `core/`, DORMANT for `playground/` until it exists (it prints a NOTE).
+1. The playground and `core/` never execute pasted text as code (`eval`, `new Function`): a grep in `scripts/boundary_checks.sh`, mirrored for the playground by `.claude/hooks/guard_boundaries.py`; armed for `core/` and `playground/`.
 2. `core/` imports no adapter and not the playground: a grep in `scripts/boundary_checks.sh`, mirrored by the same hook; armed since `core/` exists.
 3. Adapters never redefine a block's meaning: not enforced by a check. The web adapter calls `compileRecipe` from `core/index.js` and its tests (`node --test adapters/web/`, run by the gate) cover its message protocol, not that no block is redefined.
 4. `../project_leeway` (on this Mac: `../MyGameEngine_Projects/project_leeway`) is read-only: no file is written there and no version-control command runs there — not enforced; a rule in `AGENTS.md`.
