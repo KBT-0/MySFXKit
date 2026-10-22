@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diesel demo</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem 16px; background: #fff; color: #111; }
+    label { display: block; margin: 1rem 0; }
+    pre { color: #b00020; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Diesel (MySFXKit web adapter)</h1>
+  <button id="play" type="button">Play</button>
+  <label>throttle <input id="throttle" type="range" min="-1" max="1" step="0.01" value="0"> <output id="value">0</output></label>
+  <pre id="errors" aria-live="polite"></pre>
+  <script type="module">
+    import { createRecipePlayer } from './index.js';
+
+    const button = document.getElementById('play');
+    const slider = document.getElementById('throttle');
+    const value = document.getElementById('value');
+    const errors = document.getElementById('errors');
+    const show = (error) => {
+      errors.textContent = error.errors ? error.errors.map((e) => `${e.path}: ${e.message}`).join('\n') : String(error);
+    };
+    let context = null;
+    let player = null;
+
+    async function start() {
+      context = new AudioContext();  // created inside the click: Safari and Chrome start audio only on a gesture
+      const resumed = context.resume();  // called before the first await, while the click still counts as a gesture
+      try {
+        await resumed;
+        player = await createRecipePlayer(context);
+        player.onError((list) => show({ errors: list }));
+        player.node.connect(context.destination);
+        const response = await fetch('../../core/recipes/diesel.json');
+        if (!response.ok) throw new Error(`diesel.json: HTTP ${response.status}`);
+        await player.load(JSON.parse(await response.text()));
+        player.setInput('throttle', Number(slider.value));
+      } catch (error) {
+        await context.close();
+        context = player = null;
+        throw error;
+      }
+    }
+
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      errors.textContent = '';
+      try {
+        if (!context) await start();
+        else if (context.state === 'running') await context.suspend();
+        else await context.resume();
+        button.textContent = context?.state === 'running' ? 'Stop' : 'Play';
+      } catch (error) {
+        show(error);
+        button.textContent = 'Play';
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    slider.addEventListener('input', () => {
+      value.textContent = slider.value;
+      player?.setInput('throttle', Number(slider.value));
+    });
+  </script>
+</body>
+</html>

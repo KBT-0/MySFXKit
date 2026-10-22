@@ -20,6 +20,8 @@ When work on a task starts, its line moves to `docs/STATE.md` and leaves this fi
 - SFX-10: the eval boundary check also scans Markdown under `core/` and `playground/`, so prose like "dynamic import (" turns it red; narrow the scan to code files or document the wording rule in `core/AGENTS.md`.
 - SFX-11: `module_roots` in `scripts/check.sh` treats a root's subfolders as modules, which does not fit a top-level `core/` module; decide the value once `adapters/` exists (round 1 review 2026-10-22).
 - SFX-12: the recipe glide starts at its target while Leeway spools up from idle; the output is not clamped to [-1, 1] (the adapter's job); `fire.gain` lags up to 127 samples (control rate). Lows from the 2026-10-22 reviews.
+- SFX-13: `adapters/web/`: `errorsOf` in `processor.js` dies on `throw undefined` (unreachable today); no `dispose()` on the player; inputs restart at defaults on each `load`; no fixture test guards the `adapters/web/` part of `build_test_cmd`; decide whether `GUARDED_EVAL` should cover `adapters/` (the test's own `await import()` needs an exemption). Lows from the 2026-10-22 adapter review.
+- SFX-14: a gate fixture that makes `build_test_cmd` fail when a module's test files are absent; and `module_roots` once two top-level modules exist (see SFX-11).
 
 ## Deferred / parked
 

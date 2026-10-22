@@ -21,11 +21,22 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   renderer, diesel recipe, 24 seeded tests), `node --test core/` in the gate, Node 26 in CI,
   the eval boundary check armed for `core/`. Review: round 1 Reject (Opus 5.5, high, fresh;
   one High, three Medium, all fixed by the worker), round 2 Accept (Opus 5.5, high, fresh).
-  Step 2 next: the AudioWorklet adapter in `adapters/web/`; step 3: a bare page with a
-  throttle slider, checked in Safari and Chrome on this Mac.
-  Manual check owed to Kemal: Node 26 must be installed on the lecture Mac and on the PATH
-  that a git hook sees (`node --version`); CI on ubuntu with Node 26 has not run yet, the
-  first push shows it.
+  Steps 2 and 3 committed: `adapters/web/` (AudioWorklet processor running the core
+  interpreter, `createRecipePlayer`, `demo.html` with a throttle slider, 13 tests) and
+  `node --test adapters/web/` in the gate. Review: Accept with Manual Checks (Opus 5.5,
+  high, fresh); Lows in BACKLOG SFX-13/14.
+  Remaining in SFX-2: the core allocates about 16 KB per 128-sample block in `step()`
+  (`core/compile.js`), `expr.js` call evaluation and `blocks.js`; a real-time path must not
+  allocate per block. Next: a core worker keeps per-node param objects and scope keys from
+  compile time, with an allocation test (`v8.getHeapStatistics`), API unchanged.
+  Manual checks owed to Kemal:
+  1. Serve the repository root (`python3 -m http.server 8000`), open
+     `http://localhost:8000/adapters/web/demo.html` in Safari: Play gives the diesel, the
+     throttle slider changes it while it plays, Stop/Play toggles, no error shows. Chrome
+     is not installed on this Mac, so the Chrome check is open.
+  2. Node 26 must be installed on the lecture Mac and on the PATH that a git hook sees
+     (`node --version`); CI on ubuntu with Node 26 ran for the first time on the push of
+     `547ad4c`, result not yet read.
 
 (task + module + status, or one line per operation pointing at its `docs/<OPERATION>.md`;
 delete when done — an EMPTY section means nothing is in flight, so never park closed work
