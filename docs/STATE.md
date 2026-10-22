@@ -11,6 +11,10 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
 
 ## Active work
 
+- Handed off (Claude Code, Opus 5.5, 2026-10-23, lead session 3): this lead session ended
+  at about 195k context after SFX-5, the adapter and playground event work, and the SFX-20
+  diagnosis. The next lead session starts from `docs/handoffs/2026-10-23-lead-handoff-3.md`
+  (SFX-4, the deck). Delete this line and the handoff file when that session has read them.
 - SFX-5 (Claude Code, Opus 5.5 lead, 2026-10-22/23, lead session 3; every worker an Opus
   5.5 sub-agent at high effort, every review a fresh Opus 5.5 `diff-reviewer` at high):
   all six remaining Leeway recipes are committed in `core/recipes/` with the blocks they
