@@ -43,7 +43,7 @@ loads may still allocate, and `compileRecipe` and `reset` allocate.
 | `out` | the id of the output node; missing, the node with id `out` |
 
 Every node parameter is a number or an expr string. Every node except a trigger block (`pulse`,
-`randomTrigger`, `trigger`) or a control block (`lfo`, `randomWalk`) also takes `gain` (default 1) and
+`randomTrigger`, `trigger`, `sequence`) or a control block (`lfo`, `randomWalk`) also takes `gain` (default 1) and
 `env: { trigger, decay, attack, length, stop }`: an envelope restarted at each firing of the trigger
 node `trigger` (any trigger block) and silent before the first. `decay`, `attack`, `length` and `stop`
 are exprs in seconds, evaluated once per control block; `attack` and `length` are optional
@@ -71,6 +71,13 @@ under an attack/length/decay `env`. The ferry (`recipes/ferry.json`) is Leeway's
 an event every 35–90 s (the first at 1 s, not Leeway's 25 s, so a short render hears it), a
 115–145 Hz saw low-passed at 600 Hz for 1.8–2.6 s. Placement (distance, pan) is the
 adapter's; each recipe's `description` lists its deviations from Leeway.
+
+The gull (`recipes/gull.json`) is one bird of Leeway's `GullCall`, no inputs: a `randomTrigger`
+starts a call 0.5–1.5 s in, then every 3–22 s, at a pitch of 700–1000 Hz. A `sequence` makes each call a
+laugh (35 %: 4–6 notes of 0.11 s) or a long call (65 %: 3–7 notes, the first 0.42 s, each later one 0.2–0.26 s, drawn per note where
+Leeway draws one length for all of a call's later notes). Each note is
+0.965 times lower than the one before and rises then falls within itself. The voice is a rasping saw
+plus noise through two formant band-passes. A flock is several instances with their own seeds, placed by the adapter.
 
 The hull impact (`recipes/hull_impact.json`) is Leeway's `HullImpact`, played once per event:
 the game calls `trigger('impact', strength)`, strength 0..1. A 45 Hz sine decaying with time
@@ -113,8 +120,8 @@ constant 0.15 s and noise low-passed at 700 Hz, times 3, decaying with 0.05 s; b
 
 A param reads inputs and earlier params. A node reads inputs, params and other nodes' fields;
 each field it reads orders that node first. A node's fields are its parameters (`gain`
-included), for a `pulse` or a `randomTrigger` its `hold` names, for a `trigger` `strength`, for an `lfo` `value` (and
-`harmonic`), for a `randomWalk` `value`. A node may also read its own published fields (not its
+included), for a `pulse` or a `randomTrigger` its `hold` names, for a `trigger` `strength`, for a `sequence` `choice`,
+`index`, `length` and `phase`, for an `lfo` `value` (and `harmonic`), for a `randomWalk` `value`. A node may also read its own published fields (not its
 parameters): it gets their value at the end of the previous control block, 0 in the first
 (`spacing: "horn.length + 0.12"`). A result that is not finite (a division by zero)
 counts as 0, and every result is clamped to ±1e6; so is every node's output sample, so NaN and
@@ -135,6 +142,7 @@ program of fixed opcodes; nothing is ever run as code.
 | `pulse` | `hz` (1), `jitter` (0, at most 0.5), `hold: { name: [lo, hi] }` | one-sample triggers; each period is `(1 ± jitter) / hz`; each pulse draws every `hold` value uniformly from [lo, hi], readable as `<id>.<name>` |
 | `randomTrigger` | `every: [a, b]` seconds ([1, 4]), `first: [a, b]` seconds (`every`), `repeat: [lo, hi]` whole numbers ([1, 1]), `spacing` seconds (0.25), `hold: { name: [lo, hi] }` | one-sample triggers in events: the first event `first` seconds in, each next one a wait drawn uniformly from `every` after the previous event's last firing; each event draws every `hold` value uniformly from [lo, hi] (readable as `<id>.<name>`) and a count of firings uniformly from `repeat`, `spacing` seconds apart (evaluated once per control block) |
 | `trigger` | `range: [lo, hi]` (`[0, 1]`), `maxHold` seconds (0) | a game event named by the node id: one trigger at the first sample of the control block after `instance.trigger(id, strength)`. Publishes `<id>.strength`, the event's strength clamped to `range` (`lo` before the first event). Two events before the same block fire once, with the stronger strength; an event within `maxHold` seconds of the previous firing keeps the stronger of its strength and the held one, as Leeway's `HullImpact` |
+| `sequence` | `sync`: a trigger node id (required), `variants`: 1 to 16 `{ weight (1), count: [lo, hi] whole numbers, 1 to 64, first: [a, b] seconds, rest: [a, b] seconds (first), gap: [a, b] seconds ([0, 0]) }` | one trigger per note: each firing of `sync` starts a run (a firing during a run starts a new one) and picks a variant with chance weight / total weight. The run has a count of notes drawn uniformly from `count`; the first note lasts a length drawn from `first`, each next one a length drawn from `rest`, and a gap drawn from `gap` follows each note before the next starts. Publishes `<id>.choice` (the variant's index, from 0), `<id>.index` (the note, from 0), `<id>.length` (its seconds) and `<id>.phase` (seconds since its start / its length, at most 1; 1 between runs, before the first included), once per control block. Modelled on Leeway's `GullCall`, which draws one length for all of a call's later notes where `rest` is drawn per note |
 | `lfo` | `rate` Hz (1), `harmonic`: a whole number n >= 1 (optional) | silent; publishes `<id>.value` = sin(2π · phase) and, with `harmonic`, `<id>.harmonic` = sin(2π · n · phase), once per control block; the phase starts at 0 |
 | `randomWalk` | `range: [lo, hi]` ([0, 1]), `every: [a, b]` seconds ([1, 4]), `slew` seconds (1) | silent; publishes `<id>.value`, which starts mid-range and glides (time constant `slew`; 0 jumps) toward a target drawn uniformly from `range`; a new target and a new wait drawn from `every` when the wait runs out, the first at once; once per control block |
 

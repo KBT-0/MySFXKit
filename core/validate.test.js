@@ -45,7 +45,7 @@ test('validate: shapes, typos and option checks', () => {
   assert.match(errorsOf(recipe([{ id: 'out', type: 'osc', cuttoff: 3 }]))[0].message, /unknown key for a osc node/);
   assert.match(errorsOf(recipe([{ id: 'out', type: 'osc', wave: 'square' }]))[0].message, /must be one of sine, saw/);
   assert.match(errorsOf(recipe([{ id: 'p', type: 'pulse', hold: { g: [1, 0] } }, { id: 'out', type: 'osc' }]))[0].message, /low <= high/);
-  assert.match(errorsOf(recipe([{ id: 'n', type: 'noise' }, { id: 'out', type: 'lowpass', in: 'n', env: { trigger: 'n', decay: 1 } }]))[0].message, /must be a trigger node \(pulse, randomTrigger, trigger\)/);
+  assert.match(errorsOf(recipe([{ id: 'n', type: 'noise' }, { id: 'out', type: 'lowpass', in: 'n', env: { trigger: 'n', decay: 1 } }]))[0].message, /must be a trigger node \(pulse, randomTrigger, trigger, sequence\)/);
   assert.match(errorsOf(recipe([{ id: 'n', type: 'noise' }, { id: 'out', type: 'mix', in: ['n'], gains: [1, 2] }]))[0].message, /one gain per input/);
   assert.match(errorsOf({ ...recipe([{ id: 'out', type: 'osc' }]), seed: 1.5 })[0].path, /seed/);
   assert.match(errorsOf(recipe([{ id: 'out', type: 'osc' }], { inputs: { x: { min: 1, max: 0, default: 0 } } }))[0].message, /min <= default <= max/);

@@ -141,3 +141,7 @@ Its **AÇIK** items (§5.1 format, §7 timings, §9 questions) are OPEN until Ke
   `trigger` node: the recipe holds `{ "id": "impact", "type": "trigger" }` and the game
   calls `trigger("impact", strength)`. Events are not declared among `inputs`.
   Decided: 2026-10-22, approved by Kemal ("Tetik düğümünün adı", the recommended option).
+- 2.6 DECIDED — the `sequence`/`choose` control block of §2.2 is ONE block, `sequence`: a
+  weighted pick among its `variants` (`{ weight, count, first, rest, gap }`) per run, not a
+  separate `choose` block, because the variants differ in the note timing `sequence` reads.
+  Decided: 2026-10-23, approved by Kemal ("Evet, içinde kalsın", the recommended option).

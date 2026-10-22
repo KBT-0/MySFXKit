@@ -30,6 +30,12 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   (PROJECT 2.5), `env.stop`, `renderOffline` events, `hull_impact`. The web adapter must
   forward a port message to `instance.trigger(name, strength)`; event names are the ids of
   nodes with `type === "trigger"`. Listening check of `hull_impact` owed to Kemal.
+  Part 4 committed (Opus 5.5 worker sub-agent, high, one compaction; review round 1 Accept
+  with Manual Checks with one Medium fixed by the author in the docs, round 2 Accept, both
+  Opus 5.5 high, fresh; Lows in BACKLOG SFX-21): `sequence` with weighted `variants`
+  (PROJECT 2.6) and `gull`. NOT verified: the gull is not in `core/alloc.test.js`, so the
+  `sequence` block's no-allocation claim is untested until BACKLOG SFX-20 lands. Listening
+  check of `gull` against Leeway's `GullCall` owed to Kemal.
   GitHub Pages is live at `https://kbt-0.github.io/MySFXKit/playground/`; pushes rebuild it.
 - SFX-3 (Claude Code, Fable 5.1 lead; Opus 5.5 worker sub-agent, high effort, 2026-10-22):
   playground v0 in `playground/` (paste a recipe, fence stripping, schema errors, Play, one

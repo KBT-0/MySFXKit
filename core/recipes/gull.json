@@ -1,0 +1,27 @@
+{
+  "name": "gull",
+  "description": "One of Leeway's gulls (engine/audio/voices.hpp, GullCall; soundscape.hpp; sound_tuning.hpp) at full loudness: a harsh, nasal 'kyow'. Each call is either a laugh (35 %): 4 .. 6 notes of 0.11 s, 0.06 s apart, or a long call (65 %): 3 .. 7 notes, the first 0.42 s, the rest 0.2 .. 0.26 s, 0.09 s apart. Each call draws a pitch of 700 .. 1000 Hz; each next note is 0.965 times lower; within a note the pitch rises from 0.88 to 1.12 times over its first quarter and falls to 0.76 by its end, with a 30 Hz pitch jitter. The source is a sawtooth with a 95 Hz rasp (its level dips to 0.55) plus noise times 0.25, through two formant band-passes (1700 Hz damping 0.35, times 1.1; 3200 Hz damping 0.3, times 0.7) plus 0.15 of the source, plus a breath (noise through a 2600 Hz band-pass, damping 0.8, times 0.3); a 15 ms attack, a release over the note's last 40 ms, and a level falling by 0.3 across the note; then 0.55, Leeway's gulls 0.6 and master 0.8 into tanh. No inputs: the gull's position, distance and stereo placement (Leeway's gullReference 12 m and rolloff) are the adapter's job, and so is a flock: one instance is one bird, a flock is several instances with their own seeds. Deviations: Leeway's flock starts calls as a Poisson process at gullCallsPerBird 0.08 calls a second per bird, with up to 4 calls at once; this one bird waits a uniform 3 .. 22 s (the same mean, 12.5 s) from a call's start to the next, longer than the longest call (2.6 s), so its calls never overlap; its first call comes 0.5 .. 1.5 s in, so a short render hears it. A long call's later notes each draw their own length from 0.2 .. 0.26 s, where Leeway draws one length at the second note and keeps it for the rest of the call, so its spacing within a call is constant.The pitch, its contour and its jitter reach the sawtooth once per 128-sample control block, where Leeway's change per sample; the contour is written as min(0.88 + 0.96 p, 1.24 - 0.48 p) of the note's phase p, equal to Leeway's two lines. The jitter is a randomWalk with a new target every control block in -0.09 .. 0.09 and a 5.3 ms slew (a 30 Hz low-pass), times 0.32, with about the standard deviation of Leeway's per-sample noise low-passed at 30 Hz. The rasp is a 95 Hz pulse that restarts an exponential fall of the sawtooth's level from 1 to 0.55 (time constant 17.6 ms), where Leeway's is a sine dip between 1 and 0.55 at 95 Hz: the same rate and depth, a brighter shape. The release is exponential (time constant 15 ms) from 40 ms before the note's end and cut to zero at the end, where Leeway's is a linear 40 ms ramp. The sawtooth and the filters run between notes, where Leeway's pause; the noise comes from this recipe's own generator.",
+  "version": 0,
+  "seed": 53,
+  "nodes": [
+    { "id": "calls", "type": "randomTrigger", "first": [0.5, 1.5], "every": [3, 22], "hold": { "pitch": [700, 1000] } },
+    { "id": "notes", "type": "sequence", "sync": "calls", "variants": [
+      { "weight": 0.35, "count": [4, 6], "first": [0.11, 0.11], "gap": [0.06, 0.06] },
+      { "weight": 0.65, "count": [3, 7], "first": [0.42, 0.42], "rest": [0.2, 0.26], "gap": [0.09, 0.09] } ] },
+    { "id": "jitter", "type": "randomWalk", "range": [-0.09, 0.09], "every": [0, 0], "slew": 0.0053 },
+    { "id": "rasp", "type": "pulse", "hz": 95 },
+    { "id": "buzz", "type": "osc", "wave": "saw",
+      "freq": "calls.pitch * pow(0.965, notes.index) * min(0.88 + 0.96 * notes.phase, 1.24 - 0.48 * notes.phase) * (1 + 0.32 * jitter.value)",
+      "env": { "trigger": "rasp", "decay": 0.0176 } },
+    { "id": "hiss", "type": "noise" },
+    { "id": "source", "type": "mix", "in": ["buzz", "hiss"], "gains": [1, 0.25] },
+    { "id": "nasal", "type": "bandpass", "in": "source", "freq": 1700, "damping": 0.35 },
+    { "id": "bright", "type": "bandpass", "in": "source", "freq": 3200, "damping": 0.3 },
+    { "id": "air", "type": "noise" },
+    { "id": "breath", "type": "bandpass", "in": "air", "freq": 2600, "damping": 0.8 },
+    { "id": "voice", "type": "mix", "in": ["nasal", "bright", "source", "breath"], "gains": [1.1, 0.7, 0.15, 0.3],
+      "gain": "0.6 * 0.55 * (1 - 0.3 * notes.phase)",
+      "env": { "trigger": "notes", "attack": 0.015, "length": "notes.length - 0.04", "decay": 0.015, "stop": "notes.length" } },
+    { "id": "out", "type": "shape", "in": "voice", "drive": 0.8 }
+  ]
+}

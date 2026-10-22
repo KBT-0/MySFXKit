@@ -22,6 +22,31 @@
 const TAU = 2 * Math.PI;
 const WAVES = ['sine', 'saw'];
 const isRange = (r) => Array.isArray(r) && r.length === 2 && r.every(Number.isFinite) && r[0] <= r[1];
+/** Most notes one `sequence` run may have, and most `variants` one `sequence` may have. */
+const MAX_NOTES = 64, MAX_VARIANTS = 16;
+const VARIANT_KEYS = ['weight', 'count', 'first', 'rest', 'gap'];
+
+/** Checks a `sequence` node's `variants: [{ weight, count, first, rest, gap }]`. */
+function checkVariants(node, report) {
+  if (!Array.isArray(node.variants) || node.variants.length === 0 || node.variants.length > MAX_VARIANTS) {
+    return report('variants', `must be an array of 1 to ${MAX_VARIANTS} variants { weight, count, first, rest, gap }`);
+  }
+  let total = 0;
+  node.variants.forEach((v, j) => {
+    const at = `variants[${j}]`;
+    if (typeof v !== 'object' || v === null || Array.isArray(v)) return report(at, 'must be an object { weight, count, first, rest, gap }');
+    for (const key of Object.keys(v)) if (!VARIANT_KEYS.includes(key)) report(`${at}.${key}`, `unknown key (known: ${VARIANT_KEYS.join(', ')})`);
+    const weight = v.weight === undefined ? 1 : v.weight;
+    if (!(Number.isFinite(weight) && weight >= 0)) report(`${at}.weight`, 'must be a number >= 0');
+    else total += weight;
+    if (!(isRange(v.count) && v.count.every(Number.isInteger) && v.count[0] >= 1 && v.count[1] <= MAX_NOTES)) report(`${at}.count`, `must be [low, high] notes, two whole numbers with 1 <= low <= high <= ${MAX_NOTES}`);
+    if (v.first === undefined) report(`${at}.first`, 'is required: [low, high] seconds, the first note\'s length');
+    for (const key of ['first', 'rest', 'gap']) {
+      if (v[key] !== undefined && !(isRange(v[key]) && v[key][0] >= 0)) report(`${at}.${key}`, 'must be [low, high] seconds, two numbers with 0 <= low <= high');
+    }
+  });
+  if (!(total > 0 && Number.isFinite(total))) report('variants', 'needs a total weight above 0');
+}
 
 /** Checks a trigger block's `hold: { name: [lo, hi] }`, whose names must not clash with its `params`. */
 function checkHold(node, report, params) {
@@ -229,6 +254,60 @@ export const BLOCKS = Object.freeze({
             state[2] = 0;
           }
           state[2] += out.length / sampleRate;
+        },
+      };
+    },
+  },
+
+  sequence: {  // a run of notes started by each firing of `sync`, as Leeway's GullCall: one trigger per note start
+    params: {},
+    trigger: true,
+    sync: true,
+    options: ['variants'],
+    check(node, report) {
+      if (node.sync === undefined) report('sync', 'is required: the trigger node whose firings start a run');
+      checkVariants(node, report);
+    },
+    fields: () => ['choice', 'index', 'length', 'phase'],
+    create(node, { sampleRate, rng }) {
+      // Per variant, 8 numbers: count lo, hi; first lo, hi; rest lo, hi; gap lo, hi. Then the running total of the weights.
+      const n = node.variants.length, table = new Float64Array(8 * n), cumulative = new Float64Array(n);
+      let total = 0, last = 0;  // last: the last variant with a weight above 0, so a weight-0 one is never picked, even when unit() * total rounds up to total
+      node.variants.forEach((v, j) => {
+        table.set([...v.count, ...v.first, ...(v.rest ?? v.first), ...(v.gap ?? [0, 0])], 8 * j);
+        cumulative[j] = total += v.weight ?? 1;
+        if (v.weight !== 0) last = j;
+      });
+      const draw = (at) => { const u = rng.unit(); return table[at] * (1 - u) + table[at + 1] * u; };  // not lo + (hi - lo) * u: hi - lo may overflow
+      const fields = new Float64Array(4);  // [choice: the variant index, index: the note from 0, length: its seconds, phase: time in it / length, at most 1]
+      const state = Float64Array.of(0, -1, 0);  // [notes left after this one, seconds since this note's start (-1: no run), this note's gap]
+      const dt = 1 / sampleRate;
+      return {
+        fields,
+        process(p, io, out) {
+          for (let i = 0; i < out.length; i++) {
+            out[i] = 0;
+            if (io.sync[i] > 0) {  // a firing starts a new run, also in the middle of one
+              const w = rng.unit() * total;
+              let k = 0;
+              while (k < last && w >= cumulative[k]) k++;
+              const at = 8 * k;
+              state[0] = table[at] + Math.floor(rng.unit() * (table[at + 1] - table[at] + 1)) - 1;  // unit() < 1, so at most `high` notes
+              fields[0] = k;
+              fields[1] = 0;
+              fields[2] = draw(at + 2);
+            } else {
+              if (state[1] < 0 || (state[1] += dt) < fields[2] + state[2]) continue;
+              if (state[0] <= 0) { state[1] = -1; continue; }
+              state[0]--;
+              fields[1]++;
+              fields[2] = draw(8 * fields[0] + 4);
+            }
+            state[2] = draw(8 * fields[0] + 6);
+            state[1] = 0;
+            out[i] = 1;
+          }
+          fields[3] = state[1] < 0 || fields[2] <= state[1] ? 1 : state[1] / fields[2];
         },
       };
     },
