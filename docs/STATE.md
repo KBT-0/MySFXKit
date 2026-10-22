@@ -32,6 +32,10 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
      thud weakens and is silent at 0.
   4. Load the diesel: the event row disappears.
   5. Press Stop, press `impact`, press Play: note whether a late thud sounds.
+  6. Switch between the seven examples ten times while sound plays, then listen to
+     `city_bed` and `gull` for a minute: report any click or dropout. In V8 the audio path
+     allocates after recipe switches (BACKLOG SFX-20, deferred); Safari is expected to be
+     unaffected, and this check is the only evidence.
   GitHub Pages is live at `https://kbt-0.github.io/MySFXKit/playground/`; pushes rebuild it.
 - SFX-3 (Claude Code, Fable 5.1 lead; Opus 5.5 worker sub-agent, high effort, 2026-10-22):
   playground v0 in `playground/` (paste a recipe, fence stripping, schema errors, Play, one

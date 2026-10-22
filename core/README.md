@@ -27,7 +27,12 @@ per sample. A node's fields read by an expr (`fire.gain`) are control-rate value
 **Real time:** once the JIT has optimized it (V8, measured on Node), `render` allocates
 nothing per block, so an audio thread (an AudioWorklet) can call it every 128 frames without
 garbage collection pauses; `alloc.test.js` measures it. The first second or so after a recipe
-loads may still allocate, and `compileRecipe` and `reset` allocate.
+loads may still allocate, and `compileRecipe` and `reset` allocate. **Limit (V8):** this holds
+for the first recipes a process runs. Once an earlier instance is garbage-collected, V8 drops
+optimized code built around it, and control-rate blocks then allocate for thousands of blocks
+(measured up to about 1.5 MB per 10 s); `alloc.test.js` passes only in the order it lists, and
+`gull` is not in it. JavaScriptCore (Safari) stores doubles unboxed, so it is probably not
+affected; that is not measured. The fix is `docs/BACKLOG.md` SFX-20.
 
 ## Recipe format v0
 
