@@ -14,7 +14,7 @@ the rest of that section: its brief or definition names what to read. It leaves
 
 ## What this project is
 
-MySFXKit is an open-source kit that lets an AI agent (Claude Code, Codex, any other) read a game project, find its sound needs, produce those sounds by **synthesis** (no recorded assets), integrate them and position them in the game. Its core is a sound recipe that reacts to game state (throttle drives the engine, speed drives the water, position drives the 3D mix); a static WAV export is a side feature. Its first deliverable is the MVP for Kemal's guest lecture on game audio at Istanbul Kent University (about 2026-11-03), where the kit is only the bench the concepts are shown on. The full brief, with its binding KARAR items and the open AÇIK items, is `docs/MySFXKit_brief.md` (Turkish).
+MySFXKit is an open-source kit that lets an AI agent (Claude Code, Codex, any other) read a game project, find its sound needs, produce those sounds by **synthesis** (no recorded assets), integrate them and position them in the game. Its core is a sound recipe that reacts to game state (throttle drives the engine, speed drives the water, position drives the 3D mix); a static WAV export is a side feature. Its first deliverable is the MVP for Kemal's guest lecture on game audio at Istanbul Kent University (2026-11-20), where the kit is only the bench the concepts are shown on. The full brief, with its binding KARAR items and the open AÇIK items, is `docs/MySFXKit_brief.md` (Turkish).
 
 **Design authority is `docs/PROJECT.md`** — what this project is and every decision that shaped
 it, each marked DECIDED or OPEN. It is read by section only (reading order, item 6).
@@ -214,7 +214,7 @@ an explicit "start it here".
   early-warning system").
 - The work would write a file in, or run a `git` command in, `../project_leeway` (on this Mac: `../MyGameEngine_Projects/project_leeway`) → stop; it is read-only.
 - The work would contradict a KARAR of `docs/MySFXKit_brief.md`, or decide an AÇIK item (§5.1 format, name, licence, lecture length, public repository) → stop and ask Kemal.
-- The work would add a dependency the lecture Mac must install before 2026-11-03 → ask first.
+- The work would add a dependency the lecture Mac must install before 2026-11-20 → ask first.
 
 ### MENTION ONCE — one line in your closing summary, never mid-work
 

@@ -100,7 +100,7 @@ out of the permanent file; matklad's ARCHITECTURE.md, where the code lives.)
 
 ## 1. What this project is
 
-MySFXKit is an open-source kit that lets an AI agent (Claude Code, Codex, any other) read a game project, find its sound needs, produce those sounds by **synthesis** (no recorded assets), integrate them and position them in the game. Its core is a sound recipe that reacts to game state (throttle drives the engine, speed drives the water, position drives the 3D mix); a static WAV export is a side feature. Its first deliverable is the MVP for Kemal's guest lecture on game audio at Istanbul Kent University (about 2026-11-03), where the kit is only the bench the concepts are shown on. The full brief, with its binding KARAR items and the open AÇIK items, is `docs/MySFXKit_brief.md` (Turkish).
+MySFXKit is an open-source kit that lets an AI agent (Claude Code, Codex, any other) read a game project, find its sound needs, produce those sounds by **synthesis** (no recorded assets), integrate them and position them in the game. Its core is a sound recipe that reacts to game state (throttle drives the engine, speed drives the water, position drives the 3D mix); a static WAV export is a side feature. Its first deliverable is the MVP for Kemal's guest lecture on game audio at Istanbul Kent University (2026-11-20), where the kit is only the bench the concepts are shown on. The full brief, with its binding KARAR items and the open AÇIK items, is `docs/MySFXKit_brief.md` (Turkish).
 
 <!-- Everything else is added as it is decided. This file is expected to be nearly empty on
      day one and to grow through conversation — that is the intended shape, not a gap to be
@@ -151,3 +151,8 @@ Its **AÇIK** items (§5.1 format, §7 timings, §9 questions) are OPEN until Ke
   lecture must work in every case ("her türlü koşula göre kendimizi ayarlayalım"). Name:
   `MySFXKit`. Licence: MIT. No cases from Kemal's own Steam games.
   Decided: 2026-10-23, approved by Kemal through the question tool.
+- 2.8 DECIDED — the lecture's title, date and speaker line: "Oyun Sesi Nasıl Düşünür?
+  Prosedürel Ses ve 3B Konumlandırma", on 2026-11-20, speaker "Kemal Tan" ("bu arada başlık
+  kesinleşti; 20 Kasım - Oyun Sesi Nasıl Düşünür? Prosedürel Ses ve 3B Konumlandırma - Kemal
+  Tan"). It replaces the provisional title and the date "about 2026-11-03" of brief §1,
+  which is left unchanged. Decided: 2026-10-23, stated by Kemal in chat.

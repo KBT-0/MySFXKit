@@ -9,7 +9,7 @@ reasons are in `docs/WORKFLOW.md`, "The state, backlog and phase files".
 
 ## Current phase: Phase 0 — recipe format and the lecture MVP
 
-**What it must find out:** Can a sound recipe that reacts to game state be produced by any LLM, pasted into a serverless playground, heard in a browser on the lecture Mac, and shown in the lecture on about 2026-11-03?
+**What it must find out:** Can a sound recipe that reacts to game state be produced by any LLM, pasted into a serverless playground, heard in a browser on the lecture Mac, and shown in the lecture on 2026-11-20?
 
 <!-- State what the phase must find out or which risk it retires, in one sentence (a
      question is a good form, not a requirement). If it cannot be put in one sentence, split

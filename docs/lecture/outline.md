@@ -30,9 +30,8 @@ bir sese iner.
 
 ## Slayt 0 — Kapak
 
-- Başlık (GEÇİCİ, Kemal kesinleştirecek): **Sesin Tarifi: Kaydetmeden Üretilen, Oyunun
-  Durumuna Tepki Veren Prosedürel Oyun Sesi**
-- Kemal (ad soyad ve unvan Kemal'den) · İstanbul Kent Üniversitesi · konuk ders · 2026-11-03 (tarih kesinleşecek)
+- Başlık: **Oyun Sesi Nasıl Düşünür? Prosedürel Ses ve 3B Konumlandırma**
+- Kemal Tan · İstanbul Kent Üniversitesi · konuk ders · 20 Kasım 2026
 
 ---
 
@@ -244,8 +243,9 @@ aynı "içini aç" adımı onlarla yapılır.
 
 ## Açık noktalar (Kemal)
 
-1. Başlık geçici; kapak slaytında kesinleşecek.
-2. Ders tarihi "yaklaşık 2026-11-03"; kesin tarih kapak slaytına yazılacak.
+1. Başlık "3B Konumlandırma"yı vaat ediyor; taslakta konumlandırma şimdilik bir slayt (3.5)
+   ve Leeway'deki martılar. Ağırlığının artırılıp artırılmayacağı Kemal'in kararı.
+2. Kapaktaki unvan (varsa) Kemal'den.
 3. Blok 1'in iki videosu ve tüm ekran görüntüleri çekilmedi.
 4. Blok 4 için FMOD / Wwise görselinin kaynağı seçilecek.
 5. Blok 8'in kaynak listesi Kemal'den gelecek.
