@@ -45,7 +45,7 @@ high. Every Agent call names `model` and `effort` (a hook blocks it otherwise).
    the fallback. Brief §9 is answered (PROJECT 2.7): two hours with a break, time is not
    tight; a lab whose PCs probably have no audio output, students asked to bring laptops or
    headphones, so every listening step must work from the projector alone and the laptop
-   exercise is optional; no Steam cases. The lecture title is being chosen with Kemal. Non-goals: Unity, C++ interpreter, MCP, Faust
+   exercise is optional; no Steam cases. Lecture title, proposed by the lead and answered "tamam devam edelim" by Kemal (read as accepted, not confirmed as final): "Sesin Tarifi: Kaydetmeden Üretilen, Oyunun Durumuna Tepki Veren Prosedürel Oyun Sesi". Confirm it once before it goes on the title slide. Non-goals: Unity, C++ interpreter, MCP, Faust
    export, music, 2D listener scene, WAV export, copy-prompt text (SFX-6, SFX-7), marketing
    the kit in the lecture (brief §2 KARAR).
 2. **Files (verified 2026-10-23).** `docs/MySFXKit_brief.md` §2, §6, §7, §9, §10;
