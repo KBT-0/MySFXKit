@@ -111,10 +111,8 @@ here; that meaning is a contract the gate does not check)
      Claude Max accounts of brief §8; working mode `solo`.
   5. `scripts/boundary_checks.sh`: two DORMANT checks (no `eval` in `playground/`, no adapter
      import in `core/`), written before the §5.1 decision; their folder names follow brief §5.
-- The brief's open questions §9 (lecture length, students' computers, name, licence, Steam cases).
-  Partial answer (Kemal, 2026-10-22, lead session 3): length "bilmiyorum henüz ama uzun"
-  (not known yet, but long); laptops "Bilmiyorum, ikisine de uyacak" (unknown; the SFX-4
-  deck must work with and without student laptops, so a laptop exercise block is optional).
+- The brief's §9 questions are answered (PROJECT 2.7, 2026-10-23). The `LICENSE` file (MIT)
+  is not added yet: the copyright holder's name is to be confirmed with Kemal.
 
 ## Known issues / watch out
 

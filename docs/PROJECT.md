@@ -130,7 +130,7 @@ Its **AÇIK** items (§5.1 format, §7 timings, §9 questions) are OPEN until Ke
   Decided: 2026-10-22, Kemal chose "B: bildirimsel + expr + 4 kontrol bloğu + AudioWorklet",
   the recommended option, in chat.
 - 2.3 DECIDED — `KBT-0/MySFXKit` is a **public** repository from day one, so GitHub Pages can
-  host the playground; the licence file (brief §9, MIT proposed) is still OPEN.
+  host the playground; the licence is MIT (§2.7).
   Decided: 2026-10-22, approved by Kemal (he made it public himself).
 - 2.4 DECIDED — in a recipe, a node may read its OWN published fields (a `hold` value such
   as `horn.length`), getting the previous control block's value (0 in the first), but never
@@ -145,3 +145,9 @@ Its **AÇIK** items (§5.1 format, §7 timings, §9 questions) are OPEN until Ke
   weighted pick among its `variants` (`{ weight, count, first, rest, gap }`) per run, not a
   separate `choose` block, because the variants differ in the note timing `sequence` reads.
   Decided: 2026-10-23, approved by Kemal ("Evet, içinde kalsın", the recommended option).
+- 2.7 DECIDED — brief §9 answers. Length: two hours with a break, and time is not tight
+  ("molayla beraber 2 saatmiş ama vakit sıkıntımız yok"). Computers: a lab whose PCs
+  probably have no audio output; students are asked to bring laptops or headphones; the
+  lecture must work in every case ("her türlü koşula göre kendimizi ayarlayalım"). Name:
+  `MySFXKit`. Licence: MIT. No cases from Kemal's own Steam games.
+  Decided: 2026-10-23, approved by Kemal through the question tool.

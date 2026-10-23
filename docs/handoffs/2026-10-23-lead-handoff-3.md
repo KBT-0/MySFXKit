@@ -42,10 +42,10 @@ high. Every Agent call names `model` and `effort` (a hook blocks it otherwise).
 1. **Task.** SFX-4 in `docs/BACKLOG.md`: the presentation draft, due 2026-10-29: blocks 1–8
    of brief §7 (`docs/MySFXKit_brief.md`), with screenshots of the playground and the Leeway
    demo. Ask Kemal the format once (question tool); a Markdown outline in `docs/lecture/` is
-   the fallback. Kemal's partial answers to brief §9 (STATE, "Blocked"): the lecture is
-   "uzun" (long), length not known yet; laptops unknown, so the deck must work with and
-   without student laptops, with an optional laptop exercise block. Write the timing so a
-   later length answer changes one table. Non-goals: Unity, C++ interpreter, MCP, Faust
+   the fallback. Brief §9 is answered (PROJECT 2.7): two hours with a break, time is not
+   tight; a lab whose PCs probably have no audio output, students asked to bring laptops or
+   headphones, so every listening step must work from the projector alone and the laptop
+   exercise is optional; no Steam cases. The lecture title is being chosen with Kemal. Non-goals: Unity, C++ interpreter, MCP, Faust
    export, music, 2D listener scene, WAV export, copy-prompt text (SFX-6, SFX-7), marketing
    the kit in the lecture (brief §2 KARAR).
 2. **Files (verified 2026-10-23).** `docs/MySFXKit_brief.md` §2, §6, §7, §9, §10;
@@ -53,7 +53,7 @@ high. Every Agent call names `model` and `effort` (a hook blocks it otherwise).
    `core/recipes/*.json`; `playground/README.md`; Pages:
    `https://kbt-0.github.io/MySFXKit/playground/`. Leeway demo: `taka_sound.txt` + F5 in
    `../MyGameEngine_Projects/project_leeway` (READ-ONLY). Owns: docs/lecture/.
-3. **Constraints.** "Never decide an OPEN item" (brief §9: name, licence, length, laptops).
+3. **Constraints.** "Never decide an OPEN item."
    No marketing of the kit in the lecture (brief §2 KARAR). The kit is the bench the concepts
    are shown on, not the subject. `../project_leeway` is READ-ONLY: no write, no `git` there.
    No AI attribution in git. Screenshots need a browser; Chrome is not installed on this
