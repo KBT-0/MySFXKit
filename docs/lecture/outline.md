@@ -15,16 +15,18 @@ brief §2 KARAR (the kit is not marketed; its name appears once, on the closing 
 |---|---|---|---|
 | 1 | Açılış | 5 dk | Leeway video klibi |
 | 2 | Oyun sesi ≠ film sesi | 10 dk | yok (slayt) |
-| 3 | Kavramlar | 25 dk | playground, projeksiyondan |
+| 3 | Kavramlar | 20 dk | playground, projeksiyondan |
 | 4 | Sektör nasıl yapıyor | 5 dk | yok (slayt) |
 | — | Mola | 10 dk | |
-| 5 | Leeway canlı | 20 dk | Leeway, Mac'te |
-| 6 | AI ile sentez | 25 dk | playground, projeksiyondan |
+| 4b | 3B konumlandırma | 15 dk | Leeway, Mac'te |
+| 5 | Leeway canlı | 15 dk | Leeway, Mac'te |
+| 6 | AI ile sentez | 20 dk | playground, projeksiyondan |
 | 7 | Sınırlar | 10 dk | yok (slayt) |
 | 8 | Kapanış | 10 dk | yok |
 
 Süreler esnek; sıkışırsa blok 3'teki dinleme örnekleri kısalır, blok 6'daki canlı üretim
-bir sese iner.
+bir sese iner. Blok 4b brief §7'de yok; başlıktaki "3B Konumlandırma" için eklendi
+(PROJECT §2.8).
 
 ---
 
@@ -108,9 +110,9 @@ Bu bloktaki her dinleme, Kemal'in Mac'inde playground'dan projeksiyona çalını
 - Dinleme: "Hull impact (Leeway)", Play, sonra `impact` düğmesi, güç 1 → 0.5 → 0.
 - `[SCREENSHOT: playground, Hull impact, impact düğmesi ve güç slider'ı]`
 
-**Slayt 3.5 — Mesafe ve pan**
-- Uzaklaştıkça sessizleşir (ve tizler önce kaybolur); sağdaki ses sağ hoparlörde.
-- Bu derste canlı olarak blok 5'te, Leeway'deki martılarla gösterilir.
+**Slayt 3.5 — Konum**
+- Ses bir yerde duruyor; nasıl duyulduğu dinleyicinin nerede olduğuna bağlı.
+- Tek cümle, ayrıntısı moladan sonra blok 4b'de.
 
 **Slayt 3.6 — Sentezin üç adımı**
 - **Kaynak:** osilatör (sinüs, testere), gürültü
@@ -142,7 +144,50 @@ Molada Leeway'i Mac'te aç, ses çıkışını projeksiyona doğrula.
 
 ---
 
-## Blok 5 — Leeway canlı (20 dk)
+## Blok 4b — 3B konumlandırma (15 dk)
+
+Leeway Mac'te açık, ses projeksiyondan. Bu blokta sayılar Leeway'in
+`engine/audio/soundscape.hpp` (`place`) ve `taka_sound.txt` dosyalarından.
+
+**Slayt 4b.1 — Kaynak ve dinleyici**
+- Her ses kaynağının bir konumu var (tekne, martı, bir bina bloğu), dinleyicinin de bir konumu ve yönü var.
+- Oyun her karede iki şey hesaplar: bu ses ne kadar yüksek, sağda mı solda mı?
+- Leeway'de dinleyici ekranın ortasının üstünde duruyor; yakınlaşınca alçalıyor, uzaklaşınca yükseliyor
+  (`listenerHeight = 30` metre en yakın zoom'da).
+- Görsel: üstten bakış; ortada dinleyici, çevrede tekne ve martılar, aralarında mesafe çizgileri.
+- `[SCREENSHOT: Leeway, yakın zoom ve uzak zoom yan yana]`
+
+**Slayt 4b.2 — Mesafe: ses nasıl kısılır**
+- Kural: kaynak bir "referans mesafe"ye kadar tam yüksek; ötesinde mesafeyle kısılır.
+- `ses = (referans / mesafe) ^ rolloff`
+- Leeway'in referansları: tekne 25 m, martı 12 m, bina bloğu 60 m. `rolloff = 0.8`
+  (1 = doğal düşüş; daha küçük = ses daha uzağa taşınır).
+- Şehir farklı: binaların sesi mesafenin karesiyle düşüyor, bu yüzden yalnızca yakındaki
+  şehir kulağı dolduruyor.
+- Canlı: kamerayı tekneden uzaklaştır; motor kısılıyor.
+
+**Slayt 4b.3 — Yön: pan**
+- Kaynak dinleyicinin sağındaysa sağ hoparlörde, solundaysa solda.
+- Eşit güçlü pan (equal-power pan): kaynak ortadan geçerken ses alçalıp yükselmez.
+- Canlı: martı sürüsünü ekranın bir yanından öbür yanına geçir; ses hoparlörler arasında kayıyor.
+- Not: salonda iki hoparlör yoksa pan duyulmaz; prova listesine ekle (SFX-8).
+
+**Slayt 4b.4 — Leeway'in yapmadıkları**
+- Dürüst liste: Leeway yalnızca ses yüksekliği ve sağ-sol uyguluyor.
+- Yok: mesafeyle tizlerin azalması (havanın yuttuğu tizler), ön-arka ve yukarı-aşağı ayrımı
+  (HRTF), yankı, engellerin arkasındaki sesin boğulması (occlusion), Doppler.
+- Sektörde bunlar middleware'in (FMOD, Wwise) ve motorların 3B ses araçlarının işi.
+
+**Canlı ayar (blok 5'teki F5 akışıyla aynı):**
+- `rolloff = 0.8` → `1.5`: ses mesafeyle çok daha hızlı düşer.
+- `gullReference = 12` → `40`: martılar uzaktan da yüksek duyulur.
+
+Konuşma notu: Başlıktaki "3B" burada stereo demek: 3B bir konum iki sayıya, yüksekliğe ve
+sağ-sol dengesine iniyor. Kulaklıkla gerçek 3B (HRTF) bu derste yok.
+
+---
+
+## Blok 5 — Leeway canlı (15 dk)
 
 Kemal'in Mac'inde Leeway, ses projeksiyondan.
 
@@ -154,7 +199,7 @@ Kemal'in Mac'inde Leeway, ses projeksiyondan.
 1. Gaz kolu → motor: vuruş hızlanıyor, ses parlaklaşıyor (blok 3.3'ün aynısı, oyunun içinde).
 2. Hız → su: tekne hızlandıkça gövde suyu gürleşiyor.
 3. İskeleye çarp → çarpmanın gücü sesin gücü.
-4. Martılar 3D: kamerayı martı sürüsüne yaklaştır / uzaklaştır, sağa sola çevir.
+4. Martılar: blok 4b'de gösterildi; burada yalnızca hepsinin birlikte çaldığı sahne.
 5. Şehir: korna ve vapur düdüğü arada bir, şehrin uğultusu mesafeyle değişiyor.
 
 **Canlı ayar — `taka_sound.txt` + F5**
@@ -173,7 +218,7 @@ Yedek: Leeway Mac'te açılmazsa blok 1'in videosu ve blok 3'teki playground din
 
 ---
 
-## Blok 6 — AI ile sentez (25 dk)
+## Blok 6 — AI ile sentez (20 dk)
 
 **Slayt 6.1 — Fikir**
 - Bir yapay zekâya sesi tarif et → bir **tarif** (veri, kod değil) geri gelir → tarayıcıda anında çalar.
@@ -243,8 +288,8 @@ aynı "içini aç" adımı onlarla yapılır.
 
 ## Açık noktalar (Kemal)
 
-1. Başlık "3B Konumlandırma"yı vaat ediyor; taslakta konumlandırma şimdilik bir slayt (3.5)
-   ve Leeway'deki martılar. Ağırlığının artırılıp artırılmayacağı Kemal'in kararı.
+1. Blok 4b'deki "Leeway'in yapmadıkları" listesi `soundscape.hpp` okunarak yazıldı; Leeway'in
+   ses kodu değişirse ders öncesi yeniden kontrol edilir.
 2. Kapaktaki unvan (varsa) Kemal'den.
 3. Blok 1'in iki videosu ve tüm ekran görüntüleri çekilmedi.
 4. Blok 4 için FMOD / Wwise görselinin kaynağı seçilecek.

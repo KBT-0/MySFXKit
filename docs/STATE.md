@@ -14,7 +14,7 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
 - SFX-4 (Claude Code, Opus 5.5 lead, 2026-10-23, lead session 4): draft 1 of the lecture
   outline is committed as `docs/lecture/outline.md` (format chosen by Kemal: a Markdown
   outline; title, date 2026-11-20 and speaker line in PROJECT 2.8). It covers blocks 1–8 of
-  brief §7 with a 120-minute plan. NOT done: no screenshot or video was captured (named
+  brief §7 plus block 4b, 3D positioning (asked by Kemal for the title), with a 120-minute plan. NOT done: no screenshot or video was captured (named
   placeholders in the file; no browser session was run). SFX-4 is done once Kemal has read
   the draft once; its "Açık noktalar" list holds the six items owed by Kemal.
 - SFX-5 (Claude Code, Opus 5.5 lead, 2026-10-22/23, lead session 3; every worker an Opus
