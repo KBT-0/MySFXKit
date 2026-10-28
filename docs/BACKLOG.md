@@ -12,7 +12,7 @@ When work on a task starts, its line moves to `docs/STATE.md` and leaves this fi
 - SFX-2: core recipe model + WebAudio adapter + first Leeway recipe (diesel) playing in the browser.
 - SFX-4: presentation draft (deadline 2026-10-29, end of week 1).
 - SFX-6: 2D listener scene, WAV export, bundled classic examples (UI click, jump, explosion, wind).
-- SFX-7: skill v0 (agent workflow text) and the copy-prompt text of brief §6.
+- SFX-7: skill v0 (agent workflow text). The copy-prompt text of brief §6 is in `playground/prompt.js` (2026-10-28).
 - SFX-8: rehearsal on the Mac: playground + Leeway demo (`taka_sound.txt` + F5), projector audio (brief §10).
 
 - SFX-9: `validateRecipe` throws a TypeError instead of returning errors when a JSON field that should be a string is an object with a non-callable `toString` (`"type": {"toString": 0}`, also `in`, `out`, `env.trigger`); round 2 review 2026-10-22, Medium. Coerce with `typeof === "string"` checks before the message templates.
@@ -29,6 +29,8 @@ When work on a task starts, its line moves to `docs/STATE.md` and leaves this fi
 - SFX-21: SFX-5 part 4 (2026-10-23 review): the `blocks.js` header comment (line 6) says `sync` is optional and restarts the phase; for `sequence` it is required and starts a run. Leeway's gull keeps one drawn note length for every later note of a call, `sequence` draws `rest` per note (documented as a deviation): a per-run draw option would be a format change, Kemal's call. Env `length` and `stop` are read once per control block, so a short gap before a longer note gives a full-level burst of up to 127 samples (latch them at the trigger in `core/compile.js`).
 - SFX-22: web adapter trigger review Low (2026-10-23): `core/compile.js` `trigger` (line 147) and `setInput` (line 137) coerce the name to a string, so an array name `['impact']` fires the `impact` event with no error; require `typeof name === 'string'`. `adapters/web/README.md` does not say that `reset` clears pending events.
 - SFX-23: playground review Lows (2026-10-23): `playground/README.md` lines 30-31 say pasted text reaches the page only through `textContent`, but a node id now also goes into an `aria-label` via `setAttribute` and slider bounds are properties (safe: ids match `^[A-Za-z_]\w*$`); after Stop an event press still posts the trigger with no status message (`playground/main.js` 89-91), so a late thud may sound on the next Play. An event press while a new recipe loads can reach the old recipe and report an unknown name.
+- SFX-24: `playground/prompt.test.js` builds each block's key list from `params`, `options`, `sync` and `in`, not from the `mix` block's `gains` (`core/validate.js` accepts it), so deleting `gains` from the prompt's mix line passes the tests; Low, copy-prompt round 2 review 2026-10-28.
+- SFX-25: `core/alloc.test.js` is flaky inside `./scripts/check.sh`: on 2026-10-28 one full run failed with hull_impact at 250176 bytes against the 32768 budget, while three solo runs and the next full run passed. A flaky gate can block a commit; it is probably SFX-20's V8 deoptimization (order and garbage-collection timing). Fix with SFX-20, or until then document the retry in `docs/GOTCHAS.md`.
 
 ## Deferred / parked
 

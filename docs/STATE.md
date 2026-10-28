@@ -17,6 +17,25 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   brief §7 plus block 4b, 3D positioning (asked by Kemal for the title), with a 120-minute plan. NOT done: no screenshot or video was captured (named
   placeholders in the file; no browser session was run). SFX-4 is done once Kemal has read
   the draft once; its "Açık noktalar" list holds the six items owed by Kemal.
+- SFX-7, copy-prompt part (Claude Code, Opus 5.5 lead, 2026-10-28, lead session 4; worker an
+  Opus 5.5 sub-agent at high effort): the playground has a description box and a "Copy
+  prompt" button; `playground/prompt.js` builds the prompt (format v0, an example recipe,
+  the request). Proof: Sonnet 5.5 at medium effort, given only the prompt, wrote valid,
+  non-silent recipes for rain, a door creak and a spaceship take-off on the first try (one
+  vendor only; ChatGPT and Gemini NOT tested). Review: round 1 (fresh `diff-reviewer`, one
+  Medium and three Lows, all fixed), round 2 Accept with Manual Checks (Opus 5.5, high,
+  fresh); Low in BACKLOG SFX-24. NOT verified: the UI was not run in any browser. The skill
+  v0 text of SFX-7 is still open. Manual checks owed to Kemal, in Safari:
+  1. Serve the repository root (`python3 -m http.server 8000`), open
+     `http://localhost:8000/playground/`, type a description, press Copy prompt and paste
+     it somewhere: the clipboard holds the full prompt ending with the description.
+  2. Open the page from an address with no clipboard access (plain HTTP that is not
+     localhost, such as the Mac's LAN IP): the read-only box shows the prompt, selected,
+     above the recipe box.
+  3. Press Copy prompt with an empty description and with one over 2000 characters: each
+     shows an error, and an open fallback box hides.
+  4. Paste the prompt into a real AI chat (ChatGPT or Gemini) and paste its reply into the
+     recipe box: it loads and plays.
 - SFX-5 (Claude Code, Opus 5.5 lead, 2026-10-22/23, lead session 3; every worker an Opus
   5.5 sub-agent at high effort, every review a fresh Opus 5.5 `diff-reviewer` at high):
   all six remaining Leeway recipes are committed in `core/recipes/` with the blocks they

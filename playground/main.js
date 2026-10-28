@@ -6,6 +6,7 @@ import { createRecipePlayer } from '../adapters/web/index.js';
 import { parseRecipeText } from './recipe_text.js';
 import { EXAMPLES } from './examples.js';
 import { listEvents } from './events.js';
+import { buildPrompt } from './prompt.js';
 
 const examples = document.getElementById('examples');
 const textarea = document.getElementById('recipe');
@@ -15,6 +16,10 @@ const status = document.getElementById('status');
 const errorList = document.getElementById('errors');
 const inputsBox = document.getElementById('inputs');
 const eventsBox = document.getElementById('events');
+const requestBox = document.getElementById('request');
+const copyButton = document.getElementById('copy-prompt');
+const promptBox = document.getElementById('prompt-box');
+const promptText = document.getElementById('prompt');
 
 let recipe = null;   // the last recipe that passed validation
 let acceptedText = null;  // the textarea text `recipe` came from
@@ -179,6 +184,31 @@ function guarded(action) {
   };
 }
 
+/**
+ * The Copy prompt action: the prompt for the description goes to the clipboard. Where the
+ * clipboard API is missing (a page not served over HTTPS or localhost) or refuses, the prompt
+ * shows in a read-only box to copy by hand.
+ */
+async function copyPrompt() {
+  promptBox.hidden = true;  // a prompt from an earlier fallback is stale now
+  let text;
+  try {
+    text = buildPrompt(requestBox.value);
+  } catch (error) {
+    showStatus(error.message);
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);  // the first await: the click must still count as a gesture
+    showStatus('Prompt copied. Paste it into your AI, then paste its reply into the recipe box below.');
+  } catch {
+    promptText.value = text;
+    promptBox.hidden = false;
+    promptText.select();
+    showStatus('The browser did not allow copying: copy the prompt above by hand, then paste your AI\'s reply into the recipe box.');
+  }
+}
+
 for (const { label } of EXAMPLES) {
   const option = document.createElement('option');
   option.value = String(examples.options.length - 1);
@@ -197,3 +227,4 @@ examples.addEventListener('change', guarded(async () => {
 }));
 loadButton.addEventListener('click', guarded(loadText));
 playButton.addEventListener('click', guarded(togglePlay));
+copyButton.addEventListener('click', copyPrompt);

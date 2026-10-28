@@ -12,6 +12,15 @@
     <label for="examples">Example</label>
     <select id="examples"><option value="">Choose an example</option></select>
   </p>
+  <label for="request">Describe the sound (any language)</label>
+  <textarea id="request" rows="3" autocomplete="off"></textarea>
+  <p class="row">
+    <button id="copy-prompt" type="button">Copy prompt</button>
+  </p>
+  <div id="prompt-box" hidden>
+    <label for="prompt">The prompt: select it, copy it and paste it into your AI</label>
+    <textarea id="prompt" rows="8" readonly spellcheck="false"></textarea>
+  </div>
   <label for="recipe">Paste a recipe (JSON, or the whole reply of your AI)</label>
   <textarea id="recipe" rows="14" spellcheck="false" autocomplete="off"></textarea>
   <p class="row">
