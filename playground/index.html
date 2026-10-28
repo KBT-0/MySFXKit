@@ -31,6 +31,21 @@
   <ul id="errors" aria-live="polite"></ul>
   <div id="inputs"></div>
   <div id="events"></div>
+  <section aria-labelledby="scene-title">
+    <h2 id="scene-title">Listener scene</h2>
+    <p id="scene-help">Seen from above: the listener (triangle) stands in the middle, facing up. Drag the sound source (circle), or focus it with Tab and move it with the arrow keys (Shift: 10 m a step). The square is 100 m across; the dashed circle is the reference distance.</p>
+    <svg id="scene" viewBox="-50 -50 100 100" aria-labelledby="scene-title">
+      <rect class="ground" x="-50" y="-50" width="100" height="100"/>
+      <circle id="reference-ring" r="25"/>
+      <line class="scale" x1="-46" y1="46" x2="-36" y2="46"/>
+      <text class="scale" x="-46" y="43.5">10 m</text>
+      <polygon id="listener" points="0,-3 2.5,2.5 -2.5,2.5"/>
+      <circle id="source" r="2.5" tabindex="0" role="button" aria-roledescription="movable sound source" aria-label="Sound source" aria-describedby="scene-help scene-readout"/>
+    </svg>
+    <p><output id="scene-readout" aria-live="polite"></output></p>
+    <label class="input"><span>reference (m)</span><input id="reference" type="range" min="1" max="50" step="1" value="25"><output id="reference-value">25</output></label>
+    <label class="input"><span>rolloff</span><input id="rolloff" type="range" min="0" max="3" step="0.1" value="0.8"><output id="rolloff-value">0.8</output></label>
+  </section>
   <script type="module" src="main.js"></script>
 </body>
 </html>

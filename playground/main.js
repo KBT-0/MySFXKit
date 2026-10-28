@@ -1,4 +1,4 @@
-// The playground page: paste a recipe, load it, play it, move its inputs.
+// The playground page: paste a recipe, load it, play it, move its inputs and its place around the listener.
 // Pasted text is data: it is parsed with JSON.parse, validated by core and interpreted by the
 // web adapter; it reaches the DOM only through textContent and element properties.
 import { validateRecipe } from '../core/index.js';
@@ -7,6 +7,7 @@ import { parseRecipeText } from './recipe_text.js';
 import { EXAMPLES } from './examples.js';
 import { listEvents } from './events.js';
 import { buildPrompt } from './prompt.js';
+import { clampToScene, pointerToScene, placement, pannerPosition } from './scene.js';
 
 const examples = document.getElementById('examples');
 const textarea = document.getElementById('recipe');
@@ -20,12 +21,22 @@ const requestBox = document.getElementById('request');
 const copyButton = document.getElementById('copy-prompt');
 const promptBox = document.getElementById('prompt-box');
 const promptText = document.getElementById('prompt');
+const scene = document.getElementById('scene');
+const sourceDot = document.getElementById('source');
+const referenceRing = document.getElementById('reference-ring');
+const sceneReadout = document.getElementById('scene-readout');
+const referenceSlider = document.getElementById('reference');
+const referenceValue = document.getElementById('reference-value');
+const rolloffSlider = document.getElementById('rolloff');
+const rolloffValue = document.getElementById('rolloff-value');
 
 let recipe = null;   // the last recipe that passed validation
 let acceptedText = null;  // the textarea text `recipe` came from
 let sliders = [];    // [{ name, value, row }] for `recipe`; `value` is what the player was sent
 let context = null;
 let player = null;
+let panner = null;    // player.node -> panner -> destination, from the first Play
+let source = { x: 0, y: 0 };  // the sound source in scene metres; the listener is at the origin
 
 function showStatus(text) { status.textContent = text; }
 
@@ -147,11 +158,12 @@ async function start() {
       showErrors(errors);
       showStatus('The audio thread reported an error.');
     });
-    player.node.connect(context.destination);
+    panner = new PannerNode(context, pannerOptions());
+    player.node.connect(panner).connect(context.destination);
     await sendRecipe();
   } catch (error) {
     await context.close();
-    context = player = null;
+    context = player = panner = null;
     throw error;
   }
 }
@@ -167,6 +179,42 @@ async function togglePlay() {
     await resumed;
   }
   playButton.textContent = context?.state === 'running' ? 'Stop' : 'Play';
+}
+
+/** Panner settings for the scene: Leeway's placement, exponential rolloff and an equal-power pan. */
+function pannerOptions() {
+  const { x, y, z } = pannerPosition(source);
+  return {
+    panningModel: 'equalpower', distanceModel: 'exponential', maxDistance: 10000,
+    refDistance: Number(referenceSlider.value), rolloffFactor: Number(rolloffSlider.value),
+    positionX: x, positionY: y, positionZ: z,
+  };
+}
+
+/** Draws the scene and its read-out and, once a player exists, moves the panner to match. */
+function updateScene() {
+  const reference = Number(referenceSlider.value);
+  const rolloff = Number(rolloffSlider.value);
+  sourceDot.setAttribute('cx', String(source.x));
+  sourceDot.setAttribute('cy', String(-source.y));  // SVG y grows downwards; scene y is forward (up)
+  referenceRing.setAttribute('r', String(reference));
+  referenceValue.textContent = referenceSlider.value;
+  rolloffValue.textContent = rolloffSlider.value;
+  const { distance, gain, pan } = placement(source, reference, rolloff);
+  sceneReadout.textContent = `Distance ${distance.toFixed(1)} m · gain ${gain.toFixed(2)} (${(20 * Math.log10(gain)).toFixed(1)} dB) · pan ${pan.toFixed(2)}`;
+  if (!panner) return;
+  panner.refDistance = reference;
+  panner.rolloffFactor = rolloff;
+  const { x, y, z } = pannerPosition(source);
+  const now = context.currentTime;  // a short glide, so a drag does not step the level audibly
+  panner.positionX.setTargetAtTime(x, now, 0.02);
+  panner.positionY.setTargetAtTime(y, now, 0.02);
+  panner.positionZ.setTargetAtTime(z, now, 0.02);
+}
+
+function moveSource(point) {
+  source = clampToScene(point);
+  updateScene();
 }
 
 /** Runs one action at a time with the controls disabled; an exception shows on the status line. */
@@ -228,3 +276,27 @@ examples.addEventListener('change', guarded(async () => {
 loadButton.addEventListener('click', guarded(loadText));
 playButton.addEventListener('click', guarded(togglePlay));
 copyButton.addEventListener('click', copyPrompt);
+
+// The scene: a press anywhere puts the source there and a drag moves it (mouse, touch, pen).
+scene.addEventListener('pointerdown', (event) => {
+  event.preventDefault();  // no text selection or scrolling while dragging
+  scene.setPointerCapture(event.pointerId);
+  sourceDot.focus({ preventScroll: true });
+  moveSource(pointerToScene(event.clientX, event.clientY, scene.getBoundingClientRect()));
+});
+scene.addEventListener('pointermove', (event) => {
+  if (scene.hasPointerCapture(event.pointerId)) {
+    moveSource(pointerToScene(event.clientX, event.clientY, scene.getBoundingClientRect()));
+  }
+});
+const KEY_STEPS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
+sourceDot.addEventListener('keydown', (event) => {
+  if (!Object.hasOwn(KEY_STEPS, event.key)) return;
+  event.preventDefault();
+  const [dx, dy] = KEY_STEPS[event.key];
+  const metres = event.shiftKey ? 10 : 1;
+  moveSource({ x: source.x + dx * metres, y: source.y + dy * metres });
+});
+referenceSlider.addEventListener('input', updateScene);
+rolloffSlider.addEventListener('input', updateScene);
+updateScene();

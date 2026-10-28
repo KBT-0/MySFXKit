@@ -34,6 +34,26 @@ player) with relative paths, so it runs from any static file server at the repos
    that range (step 0.01) that starts at its top. A press calls `player.trigger(id, strength)`;
    before the first Play there is no player, and the status line says to press Play first. A
    recipe without a `trigger` node shows no event controls.
+8. **Listener scene** (brief §6, step 6): a square, 100 m across, seen from above, with the
+   listener fixed in the middle facing up and one sound source (the circle). A press or drag
+   with mouse, touch or pen moves the source; with the source focused (Tab), the arrow keys
+   move it 1 m a step, 10 m with Shift. The source starts on the listener. The player's mono
+   output goes through a Web Audio `PannerNode` (`equalpower` pan, `exponential` distance
+   model, `refDistance` = reference, `rolloffFactor` = rolloff, `maxDistance` 10000) to the
+   speakers; the listener stays at the origin with the default orientation, scene right is
+   panner +x and scene forward is panner -z. The level follows Leeway's placement
+   (`soundscape.hpp`, `place`): `gain = pow(reference / max(reference, distance), rolloff)`,
+   which is Web Audio's exponential model. Two sliders set the reference (1-50 m, default 25,
+   Leeway's boat; the dashed circle) and the rolloff (0-3, default 0.8, Leeway's) live. A
+   read-out shows the distance, that gain (also in dB) and the pan, the sine of the source's
+   angle from straight ahead (`scene.js`, `placement`). The scene moves the circle before
+   Play; the panner exists from the first Play on.
+   - An equal-power pan sends a centred mono source 3 dB lower to each channel (cos 45°), as
+     Leeway does: with the source on the listener the sound is centred and at full gain, but
+     3 dB quieter per speaker than before the scene existed.
+   - Web Audio's equal-power pan is linear in the source's angle (azimuth); Leeway's is linear
+     in the sine of that angle. Left, right and centre agree; in between they differ a little.
+     The pan in the read-out is Leeway's. Both mirror a source behind the listener to the front.
 
 The page never evaluates text: pasted text is data for `JSON.parse` and the core interpreter,
 and it reaches the page only through `textContent` or an element property (`value`).
@@ -49,12 +69,13 @@ On GitHub Pages (serving `main` at the root) the page is
 
 ## Not in version 0
 
-- More bundled examples: SFX-6.
-- The 2D listener scene and WAV export: SFX-7.
+- More bundled examples and WAV export: SFX-6.
+- In the listener scene: listener height or zoom, HRTF, Doppler, more than one source.
 
 ## Tests
 
 `node --test playground/` (also run by `./scripts/check.sh`) tests `recipe_text.js`,
-`events.js` and `prompt.js` (every block type of `BLOCKS` is described in the prompt, and
+`events.js`, `scene.js` (pixel to metre, clamping at the scene edge, distance, gain and pan)
+and `prompt.js` (every block type of `BLOCKS` is described in the prompt, and
 `EXAMPLE_RECIPE` validates and renders audible output), and checks that every entry of
 `EXAMPLES` names a file that exists and passes `validateRecipe`. The page itself has no automated test; it is checked by hand in a browser.
