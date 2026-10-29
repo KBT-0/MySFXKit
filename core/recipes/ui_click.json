@@ -1,0 +1,20 @@
+{
+  "name": "ui_click",
+  "description": "A classic UI click, played once per event: the game calls instance.trigger('click', strength); the strength is ignored, every click is equally loud. It shows source -> filter -> envelope at its smallest: a 2 kHz sine (the source) that restarts its phase at each click, plus white noise through a 4.5 kHz band-pass (the filter), each under a fast decay (the envelope: time constant 12 ms for the sine, 3 ms for the noise tick), both cut to zero 80 ms after the click. Variation: each click picks one of three pitches, 1920, 2000 or 2080 Hz (a sequence's three equal-weight variants, read as pick.choice), so a row of clicks is not one copy repeated. Both times 0.6, then into tanh.",
+  "version": 0,
+  "seed": 3141592,
+  "nodes": [
+    { "id": "click", "type": "trigger" },
+    { "id": "pick", "type": "sequence", "sync": "click", "variants": [
+      { "count": [1, 1], "first": [0.02, 0.02] },
+      { "count": [1, 1], "first": [0.02, 0.02] },
+      { "count": [1, 1], "first": [0.02, 0.02] } ] },
+    { "id": "ping", "type": "osc", "wave": "sine", "freq": "2000 * (1 + 0.04 * (pick.choice - 1))", "sync": "click",
+      "env": { "trigger": "click", "decay": 0.012, "stop": 0.08 } },
+    { "id": "noise", "type": "noise" },
+    { "id": "tick", "type": "bandpass", "in": "noise", "freq": 4500, "damping": 0.6, "gain": 1.5,
+      "env": { "trigger": "click", "decay": 0.003, "stop": 0.08 } },
+    { "id": "press", "type": "mix", "in": ["ping", "tick"], "gains": [0.6, 0.6] },
+    { "id": "out", "type": "shape", "in": "press", "drive": 1 }
+  ]
+}

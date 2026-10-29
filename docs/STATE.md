@@ -42,8 +42,13 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   an SVG scene with a draggable, keyboard-movable source, reference and rolloff sliders
   (Leeway's 25 and 0.8) and a read-out. Review: Accept with Manual Checks (Opus 5.5, high,
   fresh); Lows in BACKLOG SFX-26. NOT verified: no browser run, no real audio heard, Safari's
-  `PannerNode` constructor and `positionX` not checked. WAV export and the classic examples
-  of SFX-6 are still open. Manual checks owed to Kemal, from `http://localhost:8000/playground/`:
+  `PannerNode` constructor and `positionX` not checked. WAV export of SFX-6 is still open.
+  The classic examples part: four recipes in `core/recipes/` (`ui_click`, `jump`,
+  `explosion`, `wind`; Opus 5.5 worker, high) with seeded feature tests in
+  `core/classics.test.js` (outside the brief's Owns line, same module, accepted by the
+  reviewer). Review: Accept with Manual Checks (Opus 5.5, high, fresh); Lows in BACKLOG
+  SFX-27. NOT verified: no agent listened to them, and they are not in the playground list
+  yet (the WAV task adds them). Manual checks owed to Kemal, from `http://localhost:8000/playground/`:
   1. In Safari with headphones, drag the source to the right edge: the sound pans right; at
      the left edge it pans left.
   2. Move the source and both sliders before the first Play, then press Play: the first
@@ -53,6 +58,8 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   4. Press Tab to the source: a blue ring shows, arrow keys move it 1 m, Shift with an arrow 10 m.
   5. On a phone, drag the source by touch: the page does not scroll during the drag, and the
      page above and below the scene still scrolls.
+  6. Listen to the four classic recipes on the lecture Mac: each is recognisable as a UI
+     click, a jump, an explosion and wind for the lecture.
 - SFX-5 (Claude Code, Opus 5.5 lead, 2026-10-22/23, lead session 3; every worker an Opus
   5.5 sub-agent at high effort, every review a fresh Opus 5.5 `diff-reviewer` at high):
   all six remaining Leeway recipes are committed in `core/recipes/` with the blocks they

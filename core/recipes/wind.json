@@ -1,0 +1,19 @@
+{
+  "name": "wind",
+  "description": "Wind that follows the game: input strength 0 .. 1 (0 is still air), set with instance.setInput('strength', value), no events. It shows a continuous parameter: the strength glides to a new value with time constant 0.5 s (no jump when the game changes it) and drives both the level and the brightness. Gusts: a randomWalk heads for a new level in 0.3 .. 1 every 0.8 .. 2.5 s (time constant 0.7 s). Two noise layers: a howl, noise through a narrow band-pass (damping 0.4) at 250 + 1100 * strength * gust Hz, and a body, noise low-passed at 200 + 1500 * strength * gust Hz; times 0.5 and 1.5, both at a level of strength * (0.4 + 0.6 * gust). Then into tanh.",
+  "version": 0,
+  "seed": 1414213,
+  "inputs": { "strength": { "min": 0, "max": 1, "default": 0.5 } },
+  "params": {
+    "force": { "slew": 0.5, "rate": "strength" }
+  },
+  "nodes": [
+    { "id": "gust", "type": "randomWalk", "range": [0.3, 1], "every": [0.8, 2.5], "slew": 0.7 },
+    { "id": "noise", "type": "noise" },
+    { "id": "howl", "type": "bandpass", "in": "noise", "freq": "250 + 1100 * force * gust.value", "damping": 0.4 },
+    { "id": "body", "type": "lowpass", "in": "noise", "cutoff": "200 + 1500 * force * gust.value" },
+    { "id": "air", "type": "mix", "in": ["howl", "body"],
+      "gains": ["0.5 * force * (0.4 + 0.6 * gust.value)", "1.5 * force * (0.4 + 0.6 * gust.value)"] },
+    { "id": "out", "type": "shape", "in": "air", "drive": 1 }
+  ]
+}

@@ -90,6 +90,29 @@ constant 0.15 s and noise low-passed at 700 Hz, times 3, decaying with 0.05 s; b
 1.2 s after the event; scaled by the strength, then Leeway's `impact` 0.9 and `master` 0.8 into
 `tanh`. An event within 1.2 s of the last keeps the stronger strength (`maxHold`), as Leeway's.
 
+Four classic examples (brief §6, step 8) are lecture material, each showing one concept; they
+use only the blocks above. A `sequence` with one-note variants synced to a `trigger` gives
+each event a random pick (`<id>.choice`), a random length (`<id>.length`) and a 0 → 1 ramp
+over that length (`<id>.phase`).
+
+The UI click (`recipes/ui_click.json`), event `click` (strength ignored), shows source →
+filter → envelope: a 2 kHz sine (decay 12 ms) plus noise through a 4.5 kHz band-pass (decay
+3 ms), cut 80 ms after the click; each click picks one of three pitches, 1920, 2000 or 2080 Hz.
+
+The jump (`recipes/jump.json`), event `jump` (strength ignored), shows a parameter moving
+inside one sound: the pitch rises 3 times over the jump, `pow(3, hop.phase)`; each jump picks
+one of four start pitches, 220 .. 295 Hz, and a length of 0.22 .. 0.3 s. A sine plus a
+low-passed saw at the same pitch.
+
+The explosion (`recipes/explosion.json`), event `explode`, strength 0..1 (0 is silent), shows
+layering: a noise crack through a low-pass closing from 400 + 7000 × strength Hz, a sine thump
+dropping from 120 to 40 Hz, and a low noise tail (decay 0.7 s, cut 4 s after the event); every
+layer is scaled by the strength.
+
+The wind (`recipes/wind.json`), input `strength` 0..1 (0 is still), no events, shows a
+continuous parameter: the strength glides (0.5 s) and drives the level and the brightness of
+a band-passed howl and a low-passed body; a `randomWalk` makes the gusts.
+
 ```json
 {
   "name": "diesel", "version": 0, "seed": 7,

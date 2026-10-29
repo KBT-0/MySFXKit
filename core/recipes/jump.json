@@ -1,0 +1,20 @@
+{
+  "name": "jump",
+  "description": "A cartoon jump, played once per event: the game calls instance.trigger('jump', strength); the strength is ignored. It shows a parameter moving inside one sound: the pitch sweeps up by a factor of 3 over the jump, read from a sequence's phase (0 at the jump, 1 at its end) as pow(3, hop.phase). Variation: each jump picks one of four start pitches, 220, 245, 270 or 295 Hz (the sequence's four equal-weight variants, read as hop.choice, as a round-robin would), and a length of 0.22 .. 0.3 s (hop.length). Layering: 0.7 of a sine plus 0.25 of a sawtooth low-passed at 1800 Hz at the same pitch, so it carries on a projector. A 5 ms attack, a hold until 50 ms before the end, a 30 ms decay, cut to zero at the end; then into tanh.",
+  "version": 0,
+  "seed": 2718281,
+  "nodes": [
+    { "id": "jump", "type": "trigger" },
+    { "id": "hop", "type": "sequence", "sync": "jump", "variants": [
+      { "count": [1, 1], "first": [0.22, 0.3] },
+      { "count": [1, 1], "first": [0.22, 0.3] },
+      { "count": [1, 1], "first": [0.22, 0.3] },
+      { "count": [1, 1], "first": [0.22, 0.3] } ] },
+    { "id": "tone", "type": "osc", "wave": "sine", "freq": "(220 + 25 * hop.choice) * pow(3, hop.phase)", "sync": "jump" },
+    { "id": "buzz", "type": "osc", "wave": "saw", "freq": "tone.freq", "sync": "jump" },
+    { "id": "soft", "type": "lowpass", "in": "buzz", "cutoff": 1800 },
+    { "id": "voice", "type": "mix", "in": ["tone", "soft"], "gains": [0.7, 0.25],
+      "env": { "trigger": "hop", "attack": 0.005, "length": "hop.length - 0.05", "decay": 0.03, "stop": "hop.length" } },
+    { "id": "out", "type": "shape", "in": "voice", "drive": 1 }
+  ]
+}

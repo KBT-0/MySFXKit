@@ -1,0 +1,22 @@
+{
+  "name": "explosion",
+  "description": "An explosion, played once per event: the game calls instance.trigger('explode', strength), strength 0 .. 1 (0 is silent). It shows layering and an event parameter: three layers, each scaled by the strength. The crack: white noise through a low-pass that closes, from 400 + 7000 * strength Hz down to 100 .. 150 Hz, as exp(-5 p) of a sequence's phase p over the explosion's 1.4 .. 1.8 s; decay time constant 0.25 s. The thump: a sine that drops from 120 Hz to 40 Hz (time constant 80 ms, from the seconds since the event, boom.phase * boom.length), decay 0.3 s. The tail: noise through two low-passes at 150 + 250 * strength Hz, a 20 ms attack and a long decay (time constant 0.7 s), cut to zero 4 s after the event. A stronger event is louder and brighter. Then into tanh.",
+  "version": 0,
+  "seed": 1618033,
+  "nodes": [
+    { "id": "explode", "type": "trigger" },
+    { "id": "boom", "type": "sequence", "sync": "explode", "variants": [ { "count": [1, 1], "first": [1.4, 1.8] } ] },
+    { "id": "noise", "type": "noise" },
+    { "id": "crack", "type": "lowpass", "in": "noise", "cutoff": "100 + (300 + 7000 * explode.strength) * exp(-5 * boom.phase)",
+      "env": { "trigger": "explode", "decay": 0.25, "stop": 4 } },
+    { "id": "thump", "type": "osc", "wave": "sine", "freq": "40 + 80 * exp(-boom.phase * boom.length / 0.08)", "sync": "explode",
+      "env": { "trigger": "explode", "decay": 0.3, "stop": 4 } },
+    { "id": "rumbleNoise", "type": "noise" },
+    { "id": "rumbleLow", "type": "lowpass", "in": "rumbleNoise", "cutoff": "150 + 250 * explode.strength" },
+    { "id": "tail", "type": "lowpass", "in": "rumbleLow", "cutoff": "150 + 250 * explode.strength",
+      "env": { "trigger": "explode", "attack": 0.02, "decay": 0.7, "stop": 4 } },
+    { "id": "blast", "type": "mix", "in": ["crack", "thump", "tail"],
+      "gains": ["1.5 * explode.strength", "0.9 * explode.strength", "6 * explode.strength"] },
+    { "id": "out", "type": "shape", "in": "blast", "drive": 1 }
+  ]
+}
