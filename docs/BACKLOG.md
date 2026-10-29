@@ -12,7 +12,6 @@ When work on a task starts, its line moves to `docs/STATE.md` and leaves this fi
 - SFX-2: core recipe model + WebAudio adapter + first Leeway recipe (diesel) playing in the browser.
 - SFX-4: presentation draft (deadline 2026-10-29, end of week 1).
 - SFX-6: 2D listener scene, WAV export, bundled classic examples (UI click, jump, explosion, wind).
-- SFX-7: skill v0 (agent workflow text). The copy-prompt text of brief §6 is in `playground/prompt.js` (2026-10-28).
 - SFX-8: rehearsal on the Mac: playground + Leeway demo (`taka_sound.txt` + F5), projector audio (brief §10).
 
 - SFX-9: `validateRecipe` throws a TypeError instead of returning errors when a JSON field that should be a string is an object with a non-callable `toString` (`"type": {"toString": 0}`, also `in`, `out`, `env.trigger`); round 2 review 2026-10-22, Medium. Coerce with `typeof === "string"` checks before the message templates.
@@ -34,6 +33,8 @@ When work on a task starts, its line moves to `docs/STATE.md` and leaves this fi
 - SFX-26: 2D listener scene review Lows (2026-10-28): `refDistance` and `rolloffFactor` change instantly while the position glides 20 ms, so dragging either slider during playback steps the level (`playground/main.js` near line 206); `pointerdown` ignores `event.button`, so right and middle clicks move the source; the source circle is `role="button"` but Enter and Space do nothing, and a screen reader in browse mode may take the arrow keys.
 - SFX-27: `core/README.md` near line 103 says the jump's pitch "rises 3 times"; write "by a factor of 3", as the recipe's description does. Low, classic recipes review 2026-10-28.
 - SFX-28: xorshift32 (`core/rng.js`) gives tiny first draws for seeds of a few bits, so the first random pick after compile leans low; every Leeway recipe uses a seed of 7 to 53. Warm up the generator at seeding (changes every recipe's output and its tests) or document the effect. Noticed by the classic recipes worker 2026-10-28; the four classics use 7-digit seeds and are not affected.
+- SFX-29: no gate checks that the paths and exported names `skill/SKILL.md` names still exist (`validateRecipe`, `renderOffline`, `createRecipePlayer`, `pannerOptions`, `pannerPosition`, the `core/README.md` headings); a small test would catch a rename in `core/`, `adapters/web/` or `playground/` that the skill misses. Proposed by the skill v0 worker 2026-10-29.
+- SFX-30: `skill/SKILL.md` has `name: mysfxkit` in the folder `skill/`; the Agent Skills specification requires the name to match the folder, so a spec validator rejects the layout, and the skill matches only when a skills folder links it as `mysfxkit/`. Write the link name in `skill/AGENTS.md`, or rename the folder together with the distribution decision (OPEN). Low, skill v0 review 2026-10-29.
 
 ## Deferred / parked
 

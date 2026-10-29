@@ -45,8 +45,9 @@ setup/       the kit's setup interview (kit-owned)
 core/        the recipe model, validator, expr language, blocks, offline renderer (core/README.md)
 adapters/    one folder per engine; adapters/web/ runs core in an AudioWorklet (adapters/web/README.md)
 playground/  the static site of brief §6: paste, load, play, sliders (playground/README.md)
+skill/       the agent's workflow as one Agent Skills file (skill/SKILL.md, rules in skill/AGENTS.md)
 
-Planned (brief §5): more adapters, skill/, later mcp/ and providers/.
+Planned (brief §5): more adapters, later mcp/ and providers/.
 ```
 
 Two documentation subdirectories exist for process output rather than design:
@@ -75,7 +76,7 @@ empty until a second top-level module exists.
 |---|---|
 | `core/` | Engine-free recipe model (format B, PROJECT §2.2): validator, expr language, block registry, interpreter, offline renderer, and the recipe library ported from Leeway as data (`core/recipes/`); `node --test core/` |
 | `adapters/` | One folder per engine. `adapters/web/`: the WebAudio adapter, the core interpreter in an AudioWorklet (PROJECT §2.2), and a demo page; `node --test adapters/web/`. Planned: raylib/C++, Unity … |
-| `skill/` (planned) | The agent's workflow instructions |
+| `skill/` | Skill v0: the agent's workflow (scan, find missing sounds, pick or write a recipe, integrate, position, verify) in `skill/SKILL.md`; it points to `core/README.md` for the format and integrates through `adapters/web/` only; no tests |
 | `playground/` | The static site of brief §6, version 0: paste a recipe, validate it with core, play it through `adapters/web/`, one slider per input, bundled examples (`playground/examples.js`); `node --test playground/` |
 
 <!-- One table per top-level area. Columns: Module | Responsibility | (optional) the design

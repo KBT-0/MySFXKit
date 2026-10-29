@@ -11,10 +11,21 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
 
 ## Active work
 
-- Handed off (Claude Code, Opus 5.5, 2026-10-29, lead session 4): this lead session ended at
-  about 217k context after SFX-4, SFX-8 drafts and the SFX-6 and SFX-7 copy-prompt work. The
-  next lead session starts from `docs/handoffs/2026-10-29-lead-handoff-4.md` (SFX-7 skill v0).
-  Delete this line and the handoff file when that session has read them.
+- SFX-7, skill v0 part (Claude Code, Opus 5.5 lead, 2026-10-29, lead session 5; worker an
+  Opus 5.5 sub-agent at high effort): `skill/SKILL.md` (Agent Skills format, frontmatter
+  `name` and `description` only) and `skill/AGENTS.md`; `docs/ARCHITECTURE.md` lists `skill/`.
+  Kemal's scope (2026-10-29): one shared SKILL.md; integrate and position cover the web
+  adapter only. The skill points to `core/README.md` and never restates the format; drift
+  test proposed as BACKLOG SFX-29. Worked check: a fresh Sonnet 5.5 agent at medium effort,
+  given only the skill, added two valid, non-silent recipes (thrust, coin) to a soundless 2D
+  canvas game and wired them through `createRecipePlayer` with a `PannerNode`; its five gaps
+  were fixed. Review: Accept with Manual Checks (Opus 5.5, high, fresh `diff-reviewer`); Low
+  in BACKLOG SFX-30. Gate: two worker runs of `./scripts/check.sh` FAILED, each only on
+  `core/alloc.test.js` (`hull_impact`, BACKLOG SFX-25); the lead's run on the same tree,
+  machine idle, PASSED. NOT verified: no browser run of the skill's steps 4 and 5; Claude
+  Code and Codex loading the file as a skill was not tested. Manual check owed to Kemal:
+  1. In Safari, load two recipe players on one `AudioContext` (step 4 makes one player per
+     sound, and each calls `addModule` again): both sounds play and no error shows.
 - SFX-4 (Claude Code, Opus 5.5 lead, 2026-10-23, lead session 4): draft 1 of the lecture
   outline is committed as `docs/lecture/outline.md` (format chosen by Kemal: a Markdown
   outline; title, date 2026-11-20 and speaker line in PROJECT 2.8). It covers blocks 1–8 of
@@ -33,7 +44,7 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   vendor only; ChatGPT and Gemini NOT tested). Review: round 1 (fresh `diff-reviewer`, one
   Medium and three Lows, all fixed), round 2 Accept with Manual Checks (Opus 5.5, high,
   fresh); Low in BACKLOG SFX-24. NOT verified: the UI was not run in any browser. The skill
-  v0 text of SFX-7 is still open. Manual checks owed to Kemal, in Safari:
+  v0 text is the entry above. Manual checks owed to Kemal, in Safari:
   1. Serve the repository root (`python3 -m http.server 8000`), open
      `http://localhost:8000/playground/`, type a description, press Copy prompt and paste
      it somewhere: the clipboard holds the full prompt ending with the description.
