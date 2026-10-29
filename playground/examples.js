@@ -8,4 +8,8 @@ export const EXAMPLES = [
   { label: 'Ferry horn (Leeway)', path: '../core/recipes/ferry.json' },
   { label: 'Hull impact (Leeway)', path: '../core/recipes/hull_impact.json' },
   { label: 'Gull (Leeway)', path: '../core/recipes/gull.json' },
+  { label: 'UI click (classic)', path: '../core/recipes/ui_click.json' },
+  { label: 'Jump (classic)', path: '../core/recipes/jump.json' },
+  { label: 'Explosion (classic)', path: '../core/recipes/explosion.json' },
+  { label: 'Wind (classic)', path: '../core/recipes/wind.json' },
 ];

@@ -16,7 +16,9 @@ player) with relative paths, so it runs from any static file server at the repos
    over HTTPS or `localhost`) or refuses, the prompt shows in a read-only box to copy by hand.
    The page calls no AI itself.
 2. **Example** loads a bundled recipe into the text box and loads it. The list is
-   `EXAMPLES` in `examples.js` (label and path); add a line there to add an example.
+   `EXAMPLES` in `examples.js` (label and path); add a line there to add an example. It holds
+   the seven Leeway recipes, then four classic game sounds: UI click, jump, explosion and wind
+   (`core/README.md` lists their events and inputs).
 3. The text box takes a recipe: bare JSON, JSON in Markdown fences, or a whole AI reply with
    prose around it. `recipe_text.js` takes the first balanced `{ ... }` block (braces inside
    string literals do not count; at most 200 KB of text) and parses it with `JSON.parse`.
@@ -54,6 +56,19 @@ player) with relative paths, so it runs from any static file server at the repos
    - Web Audio's equal-power pan is linear in the source's angle (azimuth); Leeway's is linear
      in the sine of that angle. Left, right and centre agree; in between they differ a little.
      The pan in the read-out is Leeway's. Both mirror a source behind the listener to the front.
+9. **Download WAV** (brief §6, step 7) with a **Seconds** field (default 5, clamped to
+   0.5–30; `WAV_SECONDS` in `wav.js`). It takes the recipe in the text box, going through
+   Load first when the text changed since the last load (the same parse, validation and error
+   list). It renders that many seconds with `renderOffline` at 48000 Hz, with every input at
+   its slider's current value and, for each game event (`trigger` node), one event at 0.25 s
+   with that event's current strength slider value. `encodeWav` (`wav.js`) writes the samples
+   as a mono 16-bit PCM WAV: each sample is clamped to [-1, 1] and rounded after scaling by
+   32767 (so -32768 is never written), and NaN becomes 0. The file downloads as the recipe's
+   `name` reduced to letters, digits, `-` and `_` (at most 64; `recipe` when nothing is
+   left) plus `.wav`. The status line shows the rendering, the file name or the error.
+   - The WAV is the dry mono recipe: the listener scene's pan and distance are not in it.
+   - The render runs on the page's main thread; while it runs (a fraction of a second for 30 s
+     of a small recipe) the page does not respond.
 
 The page never evaluates text: pasted text is data for `JSON.parse` and the core interpreter,
 and it reaches the page only through `textContent` or an element property (`value`).
@@ -69,13 +84,15 @@ On GitHub Pages (serving `main` at the root) the page is
 
 ## Not in version 0
 
-- More bundled examples and WAV export: SFX-6.
+- WAV export in stereo, with the scene's placement, or in other formats (MP3, 24-bit).
 - In the listener scene: listener height or zoom, HRTF, Doppler, more than one source.
 
 ## Tests
 
 `node --test playground/` (also run by `./scripts/check.sh`) tests `recipe_text.js`,
-`events.js`, `scene.js` (pixel to metre, clamping at the scene edge, distance, gain and pan)
+`events.js`, `scene.js` (pixel to metre, clamping at the scene edge, distance, gain and pan),
+`wav.js` (the WAV header field by field, file length, clamping, NaN, the duration clamp and the
+file name)
 and `prompt.js` (every block type of `BLOCKS` is described in the prompt, and
 `EXAMPLE_RECIPE` validates and renders audible output), and checks that every entry of
 `EXAMPLES` names a file that exists and passes `validateRecipe`. The page itself has no automated test; it is checked by hand in a browser.

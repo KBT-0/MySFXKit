@@ -1,18 +1,21 @@
 // The playground page: paste a recipe, load it, play it, move its inputs and its place around the listener.
 // Pasted text is data: it is parsed with JSON.parse, validated by core and interpreted by the
 // web adapter; it reaches the DOM only through textContent and element properties.
-import { validateRecipe } from '../core/index.js';
+import { validateRecipe, renderOffline } from '../core/index.js';
 import { createRecipePlayer } from '../adapters/web/index.js';
 import { parseRecipeText } from './recipe_text.js';
 import { EXAMPLES } from './examples.js';
 import { listEvents } from './events.js';
 import { buildPrompt } from './prompt.js';
+import { encodeWav, wavFileName, wavSeconds, WAV_EVENT_AT, WAV_SAMPLE_RATE, WAV_SECONDS } from './wav.js';
 import { clampToScene, pointerToScene, placement, pannerPosition } from './scene.js';
 
 const examples = document.getElementById('examples');
 const textarea = document.getElementById('recipe');
 const loadButton = document.getElementById('load');
 const playButton = document.getElementById('play');
+const wavButton = document.getElementById('download-wav');
+const wavSecondsField = document.getElementById('wav-seconds');
 const status = document.getElementById('status');
 const errorList = document.getElementById('errors');
 const inputsBox = document.getElementById('inputs');
@@ -33,6 +36,7 @@ const rolloffValue = document.getElementById('rolloff-value');
 let recipe = null;   // the last recipe that passed validation
 let acceptedText = null;  // the textarea text `recipe` came from
 let sliders = [];    // [{ name, value, row }] for `recipe`; `value` is what the player was sent
+let eventStrengths = [];  // [{ id, strength }] for `recipe`: each event's strength slider value
 let context = null;
 let player = null;
 let panner = null;    // player.node -> panner -> destination, from the first Play
@@ -82,6 +86,7 @@ function buildSliders() {
  * plays only says so: the player exists after the first Play.
  */
 function buildEvents() {
+  eventStrengths = [];
   eventsBox.replaceChildren(...listEvents(recipe).map(({ id, range: [lo, hi] }) => {
     const row = document.createElement('div');
     row.className = 'input';
@@ -97,13 +102,14 @@ function buildEvents() {
     slider.setAttribute('aria-label', `${id} strength`);
     const shown = document.createElement('output');
     shown.textContent = String(hi);
-    let strength = hi;  // the exact top; the slider's own value is rounded to its step
+    const entry = { id, strength: hi };  // the exact top; the slider's own value is rounded to its step
+    eventStrengths.push(entry);
     slider.addEventListener('input', () => {
       shown.textContent = slider.value;
-      strength = Number(slider.value);
+      entry.strength = Number(slider.value);
     });
     button.addEventListener('click', () => {
-      if (player) player.trigger(id, strength);
+      if (player) player.trigger(id, entry.strength);
       else showStatus('Press Play first, then fire the event.');
     });
     row.append(button, slider, shown);
@@ -143,9 +149,11 @@ function acceptText() {
   return true;
 }
 
-/** The Load action: accepts the text and, while a player exists, swaps the sound. */
+/** The Load action: accepts the text and, while a player exists, swaps the sound. Returns whether it was accepted. */
 async function loadText() {
-  if (acceptText() && player) await sendRecipe();
+  const accepted = acceptText();
+  if (accepted && player) await sendRecipe();
+  return accepted;
 }
 
 async function start() {
@@ -179,6 +187,34 @@ async function togglePlay() {
     await resumed;
   }
   playButton.textContent = context?.state === 'running' ? 'Stop' : 'Play';
+}
+
+/**
+ * The Download WAV action: renders the recipe offline, dry and mono (no scene pan or distance),
+ * for the duration field's seconds, with the sliders' inputs and each game event fired once at
+ * `WAV_EVENT_AT` with its strength slider value, and downloads it as a 16-bit WAV file.
+ */
+async function downloadWav() {
+  if (textarea.value !== acceptedText && !(await loadText())) return;  // edited text goes through Load first
+  const seconds = wavSeconds(wavSecondsField.value);
+  wavSecondsField.value = String(seconds);
+  showStatus(`Rendering ${seconds} s of "${recipe.name}"...`);
+  await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));  // paint the status before the blocking render
+  const samples = renderOffline(recipe, {
+    sampleRate: WAV_SAMPLE_RATE,
+    seconds,
+    inputs: Object.fromEntries(sliders.map(({ name, value }) => [name, value])),
+    events: eventStrengths.map(({ id, strength }) => ({ at: WAV_EVENT_AT, name: id, strength })),
+  });
+  const url = URL.createObjectURL(new Blob([encodeWav(samples, WAV_SAMPLE_RATE)], { type: 'audio/wav' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = wavFileName(recipe.name);
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);  // later, not at once: some browsers read the URL after click() returns
+  showStatus(`Downloaded ${link.download} (${seconds} s, mono, 16-bit, ${WAV_SAMPLE_RATE} Hz).`);
 }
 
 /** Panner settings for the scene: Leeway's placement, exponential rolloff and an equal-power pan. */
@@ -220,14 +256,14 @@ function moveSource(point) {
 /** Runs one action at a time with the controls disabled; an exception shows on the status line. */
 function guarded(action) {
   return async () => {
-    loadButton.disabled = playButton.disabled = examples.disabled = textarea.readOnly = true;
+    loadButton.disabled = playButton.disabled = wavButton.disabled = examples.disabled = textarea.readOnly = true;
     try {
       await action();
     } catch (error) {
       showErrors(error.errors ?? []);
       showStatus(String(error.message ?? error));
     } finally {
-      loadButton.disabled = playButton.disabled = examples.disabled = textarea.readOnly = false;
+      loadButton.disabled = playButton.disabled = wavButton.disabled = examples.disabled = textarea.readOnly = false;
     }
   };
 }
@@ -275,6 +311,10 @@ examples.addEventListener('change', guarded(async () => {
 }));
 loadButton.addEventListener('click', guarded(loadText));
 playButton.addEventListener('click', guarded(togglePlay));
+wavButton.addEventListener('click', guarded(downloadWav));
+wavSecondsField.min = String(WAV_SECONDS.min);
+wavSecondsField.max = String(WAV_SECONDS.max);
+wavSecondsField.value = String(WAV_SECONDS.default);
 copyButton.addEventListener('click', copyPrompt);
 
 // The scene: a press anywhere puts the source there and a drag moves it (mouse, touch, pen).
