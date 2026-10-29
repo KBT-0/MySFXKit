@@ -17,6 +17,10 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   brief §7 plus block 4b, 3D positioning (asked by Kemal for the title), with a 120-minute plan. NOT done: no screenshot or video was captured (named
   placeholders in the file; no browser session was run). SFX-4 is done once Kemal has read
   the draft once; its "Açık noktalar" list holds the six items owed by Kemal.
+- SFX-8 (Claude Code, Opus 5.5 lead, 2026-10-29, lead session 4): draft 1 of the rehearsal
+  checklist is `docs/lecture/rehearsal.md` (a week before, a day before, in the room, and a
+  fallback table). No step was run: each needs the Mac, its speakers or the room. SFX-8 is
+  done once Kemal has run the rehearsal.
 - SFX-7, copy-prompt part (Claude Code, Opus 5.5 lead, 2026-10-28, lead session 4; worker an
   Opus 5.5 sub-agent at high effort): the playground has a description box and a "Copy
   prompt" button; `playground/prompt.js` builds the prompt (format v0, an example recipe,
