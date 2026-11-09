@@ -91,7 +91,7 @@ Bu bloktaki her dinleme, Kemal'in Mac'inde playground'dan projeksiyona çalını
   arasında, aralığı ±%3 kayıyor. Sonra (anlatım) "hepsi aynı olsaydı" farkını sözle anlat.
 - Dinleme: "Gull (Leeway)": her çağrı ya kahkaha (%35) ya uzun çağrı (%65); notaların
   sayısı ve uzunluğu her seferinde yeniden çekiliyor.
-- `[SCREENSHOT: playground, Diesel yüklü, throttle slider görünür]`
+- `[SCREENSHOT: playground, Diesel yüklü, throttle slider görünür]` çekildi: `docs/lecture/screenshots/slide-diesel.png` (Safari, 2026-11-09)
 
 **Slayt 3.2 — Katmanlama**
 - Bir ses birkaç basit sesin toplamıdır.
@@ -103,12 +103,12 @@ Bu bloktaki her dinleme, Kemal'in Mac'inde playground'dan projeksiyona çalını
 - Dinleme: Diesel çalarken gaz slider'ını 0'dan 1'e sür: vuruş saniyede 4.5'ten 13'e çıkıyor,
   ses parlaklaşıyor; motor gaza 1.2 sn'de yetişiyor (anında değil, ataleti var).
 - Dinleme: "Hull water (Leeway)", hız 0 → 0.5 → 1.
-- `[SCREENSHOT: playground, Hull water, speed slider]`
+- `[SCREENSHOT: playground, Hull water, speed slider]` çekildi: `docs/lecture/screenshots/slide-hull-water.png` (Safari, 2026-11-09)
 
 **Slayt 3.4 — Olay (event)**
 - Bazı sesler sürekli değil, bir anda olur: çarpma, zıplama, tık.
 - Dinleme: "Hull impact (Leeway)", Play, sonra `impact` düğmesi, güç 1 → 0.5 → 0.
-- `[SCREENSHOT: playground, Hull impact, impact düğmesi ve güç slider'ı]`
+- `[SCREENSHOT: playground, Hull impact, impact düğmesi ve güç slider'ı]` çekildi: `docs/lecture/screenshots/slide-hull-impact.png` (Safari, 2026-11-09)
 
 **Slayt 3.5 — Konum**
 - Ses bir yerde duruyor; nasıl duyulduğu dinleyicinin nerede olduğuna bağlı.
@@ -232,13 +232,14 @@ Yedek: Leeway Mac'te açılmazsa blok 1'in videosu ve blok 3'teki playground din
 4. Tarifin içini aç: hangi düğüm kaynak, hangisi filtre, hangisi zarf; blok 3.6'daki üç adım
    tarifin içinde nerede?
 5. Bir değeri elle değiştir (örnek: filtre kesimini), Load: ses değişir.
-- `[SCREENSHOT: playground, yapıştırılmış bir tarif ve doğrulama hatası örneği]`
-- `[SCREENSHOT: playground, aynı tarif düzeltilmiş ve çalıyor]`
+- `[SCREENSHOT: playground, yapıştırılmış bir tarif ve doğrulama hatası örneği]` çekildi: `docs/lecture/screenshots/slide-recipe-error.png` (Safari, 2026-11-09)
+- `[SCREENSHOT: playground, aynı tarif düzeltilmiş ve çalıyor]` çekildi: `docs/lecture/screenshots/slide-recipe-fixed.png` (Safari, 2026-11-09)
 
 **İsteğe bağlı öğrenci alıştırması** (laptop ve kulaklığı olanlar):
 - Aynı akışı kendi AI'larıyla yaparlar: siteyi açar, tarifi kendi AI'larından ister,
   yapıştırırlar. Bilgisayarı olmayan öğrenci projeksiyondan izler; ders buna dayanmaz.
-- `[EKSİK: AI'a verilecek hazır istek metni ("Prompt'u kopyala") henüz yok (BACKLOG SFX-7). Hazır olana kadar istek tahtaya yazılır.]`
+- İstek metni hazır: sesi playground'daki tarif kutusuna yazıp **Copy prompt**'a basarlar,
+  panodaki metni kendi AI'larına yapıştırırlar, dönen tarifi tarif kutusuna yapıştırırlar.
 
 Yedek: internet veya AI yanıt vermezse yedi hazır Leeway örneğinin tarifleri açılıp
 aynı "içini aç" adımı onlarla yapılır.
