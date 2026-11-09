@@ -18,7 +18,8 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   reference or rolloff slider no longer steps the level. An event press while the sound is
   stopped no longer reaches the player (`eventPressBlocked` in `playground/events.js`).
   Review: Accept with Manual Checks (Opus 5.5, high, fresh `diff-reviewer`); its Medium (the
-  skill's step 5 names the playground's panner as its example) is fixed in the next commit;
+  skill's step 5 names the playground's panner as its example) is fixed in the next commit,
+  reviewed Accept (Opus 5.5, high, fresh);
   its Low is BACKLOG SFX-31. NOT verified: no browser run, no sound heard. Manual checks owed
   to Kemal, in Safari and Chrome:
   1. Play the diesel and drag the reference and rolloff sliders during playback: no step.

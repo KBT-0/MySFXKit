@@ -119,9 +119,12 @@ code.
 ## 5. Position (web games only)
 
 For a sound with a place in the world, put a WebAudio `PannerNode` between the player and
-the destination. The kit's playground does this (`<kit>/playground/main.js`,
-`pannerOptions` and `updateScene`; `<kit>/playground/scene.js`, `pannerPosition`). Read it
-as an example; do not import playground code into the game.
+the destination. The kit's playground positions its sound (`<kit>/playground/scene.js`,
+`pannerPosition` and `placement`; `<kit>/playground/main.js`, `updateScene`). Read it as an
+example; do not import playground code into the game. Do not copy its panner settings
+(`SCENE_PANNER`): the playground sets rolloff 0 and applies distance gain in a separate
+`GainNode` only because its sliders change the distance curve while the sound plays. A game
+sets `refDistance` and `rolloffFactor` once, on the panner, as below.
 
 - `const panner = new PannerNode(context, { panningModel: 'equalpower', distanceModel: 'exponential', refDistance, rolloffFactor, maxDistance: 10000 })`,
   then `player.node.connect(panner).connect(context.destination)`.
