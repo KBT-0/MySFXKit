@@ -20,7 +20,8 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   Review: Accept with Manual Checks (Opus 5.5, high, fresh `diff-reviewer`); its Medium (the
   skill's step 5 names the playground's panner as its example) is fixed in the next commit,
   reviewed Accept (Opus 5.5, high, fresh);
-  its Low is BACKLOG SFX-31. NOT verified: no browser run, no sound heard. Manual checks owed
+  its Lows are BACKLOG SFX-31 and SFX-32 (SFX-32 from a second fresh review by
+  the parallel lead session). NOT verified: no browser run, no sound heard. Manual checks owed
   to Kemal, in Safari and Chrome:
   1. Play the diesel and drag the reference and rolloff sliders during playback: no step.
   2. Move the source before the first Play, then press Play: the level starts at the
@@ -28,6 +29,36 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   3. Press Stop, fire an event, press Play: no late thud sounds.
   4. Compare level and pan at the listener, inside the reference circle, at its edge and in a
      corner with the build before this commit: they match.
+- Lecture slides (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 5; worker an Opus 5.5
+  sub-agent at high effort): Kemal chose a Claude Slides artifact (outline open point 6).
+  Deck: https://claude.ai/artifact/TiWoR4Y2gmjWSuWZCUB6s1 (private; 34 Turkish slides in the
+  outline's block order, speaker notes from the outline, five live-demo cue slides, dashed
+  placeholder frames for every `[SCREENSHOT]`/`[VIDEO]` and for open points 2, 4 and 5).
+  NOT verified: nobody has looked at the rendered deck; the .pptx and PDF exports were not
+  tried. Open for Kemal: block 3 is 20 min in the time plan and 25 min in its heading; the
+  outline's `[EKSİK ... SFX-7]` note is out of date (the skill shipped in `ddf2161`); whether
+  a slide shows the playground address for the student exercise. Playground screenshots from
+  the browser probe are in the parallel session's scratchpad (`probe/01-start.png` to
+  `05-end.png`); they are temporary files.
+- Environment (2026-11-09): a Homebrew upgrade of Node on 2026-10-31 left
+  `/opt/homebrew/bin/node` unlinked (`brew link node` stops on an existing `npm` link), so
+  the gate failed with `node: command not found`. With Kemal's yes the lead added only that
+  link (`ln -s ../Cellar/node/26.13.0_1/bin/node /opt/homebrew/bin/node`; undo: `rm` it);
+  `doctor.sh` reads ready. Google Chrome is now installed on this Mac.
+- Browser probe (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 5): Kemal chose to
+  automate the manual browser checks. A one-off script outside the repository drove Safari
+  27.0.1 (`safaridriver`) and Chrome 157 (DevTools protocol, a separate profile) on the
+  working tree with the playground fixes above, and tapped the page's output with an
+  `AnalyserNode`. 19 of 19 checks passed in each browser: diesel starts on one click and
+  the throttle changes it; a source 40 m right sounds only on the right, and left mirrors
+  it; all eleven examples load and sound with no error (events fired by their buttons);
+  ten fast switches, then `city_bed` sounds; an invalid recipe lists errors while the old
+  sound continues; after Stop an event press shows the stopped message and the next Play
+  is silent; WAV export reads as 1 ch, 48000 Hz, Int16 (`afinfo`); Copy prompt fills the
+  clipboard. This covers the "loads, plays, no error" parts of the SFX-2, SFX-3, SFX-5,
+  SFX-6 and SFX-7 lists below. NOT covered, still owed to Kemal: everything heard by ear
+  (timbre against Leeway, clicks, the classics being recognisable), QuickTime playback,
+  phone touch, the non-localhost clipboard fallback, and a real ChatGPT or Gemini reply.
 - SFX-7, skill v0 part (Claude Code, Opus 5.5 lead, 2026-10-29, lead session 5; worker an
   Opus 5.5 sub-agent at high effort): `skill/SKILL.md` (Agent Skills format, frontmatter
   `name` and `description` only) and `skill/AGENTS.md`; `docs/ARCHITECTURE.md` lists `skill/`.
