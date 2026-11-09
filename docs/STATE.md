@@ -11,6 +11,22 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
 
 ## Active work
 
+- SFX-23/SFX-26 demo fixes (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 5; worker
+  an Opus 5.5 sub-agent at high effort): Kemal chose on 2026-11-09 to fix only the
+  demo-visible bugs before the lecture. The scene's panner now only pans (rolloff 0); a
+  `GainNode` named `level` after it glides to Leeway's placement gain, so dragging the
+  reference or rolloff slider no longer steps the level. An event press while the sound is
+  stopped no longer reaches the player (`eventPressBlocked` in `playground/events.js`).
+  Review: Accept with Manual Checks (Opus 5.5, high, fresh `diff-reviewer`); its Medium (the
+  skill's step 5 names the playground's panner as its example) is fixed in the next commit;
+  its Low is BACKLOG SFX-31. NOT verified: no browser run, no sound heard. Manual checks owed
+  to Kemal, in Safari and Chrome:
+  1. Play the diesel and drag the reference and rolloff sliders during playback: no step.
+  2. Move the source before the first Play, then press Play: the level starts at the
+     read-out's gain and does not fade from full.
+  3. Press Stop, fire an event, press Play: no late thud sounds.
+  4. Compare level and pan at the listener, inside the reference circle, at its edge and in a
+     corner with the build before this commit: they match.
 - SFX-7, skill v0 part (Claude Code, Opus 5.5 lead, 2026-10-29, lead session 5; worker an
   Opus 5.5 sub-agent at high effort): `skill/SKILL.md` (Agent Skills format, frontmatter
   `name` and `description` only) and `skill/AGENTS.md`; `docs/ARCHITECTURE.md` lists `skill/`.

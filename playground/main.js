@@ -5,10 +5,10 @@ import { validateRecipe, renderOffline } from '../core/index.js';
 import { createRecipePlayer } from '../adapters/web/index.js';
 import { parseRecipeText } from './recipe_text.js';
 import { EXAMPLES } from './examples.js';
-import { listEvents } from './events.js';
+import { listEvents, eventPressBlocked } from './events.js';
 import { buildPrompt } from './prompt.js';
 import { encodeWav, wavFileName, wavSeconds, WAV_EVENT_AT, WAV_SAMPLE_RATE, WAV_SECONDS } from './wav.js';
-import { clampToScene, pointerToScene, placement, pannerPosition } from './scene.js';
+import { clampToScene, pointerToScene, placement, pannerPosition, SCENE_GLIDE, SCENE_PANNER } from './scene.js';
 
 const examples = document.getElementById('examples');
 const textarea = document.getElementById('recipe');
@@ -39,7 +39,8 @@ let sliders = [];    // [{ name, value, row }] for `recipe`; `value` is what the
 let eventStrengths = [];  // [{ id, strength }] for `recipe`: each event's strength slider value
 let context = null;
 let player = null;
-let panner = null;    // player.node -> panner -> destination, from the first Play
+let panner = null;    // player.node -> panner -> level -> destination, from the first Play
+let level = null;     // the GainNode that carries the scene's distance gain (`placement`)
 let source = { x: 0, y: 0 };  // the sound source in scene metres; the listener is at the origin
 
 function showStatus(text) { status.textContent = text; }
@@ -83,7 +84,7 @@ function buildSliders() {
 /**
  * One button and one strength slider per game event (`trigger` node) of `recipe`; the slider
  * spans the node's `range` and starts at its top, so a press is audible. A press while no sound
- * plays only says so: the player exists after the first Play.
+ * plays only says so (`eventPressBlocked`): it never reaches the player, so it cannot sound later.
  */
 function buildEvents() {
   eventStrengths = [];
@@ -109,8 +110,9 @@ function buildEvents() {
       entry.strength = Number(slider.value);
     });
     button.addEventListener('click', () => {
-      if (player) player.trigger(id, entry.strength);
-      else showStatus('Press Play first, then fire the event.');
+      const blocked = eventPressBlocked(Boolean(player), context?.state);
+      if (blocked) showStatus(blocked);
+      else player.trigger(id, entry.strength);
     });
     row.append(button, slider, shown);
     return row;
@@ -167,11 +169,12 @@ async function start() {
       showStatus('The audio thread reported an error.');
     });
     panner = new PannerNode(context, pannerOptions());
-    player.node.connect(panner).connect(context.destination);
+    level = new GainNode(context, { gain: sceneGain() });
+    player.node.connect(panner).connect(level).connect(context.destination);
     await sendRecipe();
   } catch (error) {
     await context.close();
-    context = player = panner = null;
+    context = player = panner = level = null;
     throw error;
   }
 }
@@ -217,17 +220,18 @@ async function downloadWav() {
   showStatus(`Downloaded ${link.download} (${seconds} s, mono, 16-bit, ${WAV_SAMPLE_RATE} Hz).`);
 }
 
-/** Panner settings for the scene: Leeway's placement, exponential rolloff and an equal-power pan. */
+/** Panner settings for the scene: an equal-power pan at the source's position, no distance gain. */
 function pannerOptions() {
   const { x, y, z } = pannerPosition(source);
-  return {
-    panningModel: 'equalpower', distanceModel: 'exponential', maxDistance: 10000,
-    refDistance: Number(referenceSlider.value), rolloffFactor: Number(rolloffSlider.value),
-    positionX: x, positionY: y, positionZ: z,
-  };
+  return { ...SCENE_PANNER, positionX: x, positionY: y, positionZ: z };
 }
 
-/** Draws the scene and its read-out and, once a player exists, moves the panner to match. */
+/** Leeway's placement gain for the source at the sliders' reference and rolloff. */
+function sceneGain() {
+  return placement(source, Number(referenceSlider.value), Number(rolloffSlider.value)).gain;
+}
+
+/** Draws the scene and its read-out and, once a player exists, glides the panner and the level to match. */
 function updateScene() {
   const reference = Number(referenceSlider.value);
   const rolloff = Number(rolloffSlider.value);
@@ -239,13 +243,12 @@ function updateScene() {
   const { distance, gain, pan } = placement(source, reference, rolloff);
   sceneReadout.textContent = `Distance ${distance.toFixed(1)} m · gain ${gain.toFixed(2)} (${(20 * Math.log10(gain)).toFixed(1)} dB) · pan ${pan.toFixed(2)}`;
   if (!panner) return;
-  panner.refDistance = reference;
-  panner.rolloffFactor = rolloff;
   const { x, y, z } = pannerPosition(source);
-  const now = context.currentTime;  // a short glide, so a drag does not step the level audibly
-  panner.positionX.setTargetAtTime(x, now, 0.02);
-  panner.positionY.setTargetAtTime(y, now, 0.02);
-  panner.positionZ.setTargetAtTime(z, now, 0.02);
+  const now = context.currentTime;  // a short glide, so a drag or a slider move does not step the level audibly
+  panner.positionX.setTargetAtTime(x, now, SCENE_GLIDE);
+  panner.positionY.setTargetAtTime(y, now, SCENE_GLIDE);
+  panner.positionZ.setTargetAtTime(z, now, SCENE_GLIDE);
+  level.gain.setTargetAtTime(gain, now, SCENE_GLIDE);
 }
 
 function moveSource(point) {

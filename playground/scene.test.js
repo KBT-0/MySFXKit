@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SCENE_SIZE, clampToScene, pointerToScene, placement, pannerPosition } from './scene.js';
+import { SCENE_SIZE, SCENE_GLIDE, SCENE_PANNER, clampToScene, pointerToScene, placement, pannerPosition } from './scene.js';
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} != ${expected}`);
 const rect = { left: 10, top: 20, width: 400, height: 400 };  // 4 px per metre
@@ -54,3 +54,16 @@ test('clamping keeps inner points and maps a non-finite coordinate to 0', () => 
 test('scene forward is panner -z, scene right is panner +x', () => {
   assert.deepEqual(pannerPosition({ x: 3, y: 4 }), { x: 3, y: 0, z: -4 });
 });
+
+test('the panner adds no distance gain: the level is placement\'s gain alone, applied once', () => {
+  // Web Audio's exponential model: pow(max(d, refDistance) / refDistance, -rolloffFactor).
+  const { distanceModel, refDistance, rolloffFactor, panningModel } = SCENE_PANNER;
+  assert.equal(distanceModel, 'exponential');
+  assert.equal(panningModel, 'equalpower');
+  for (const d of [0, 1, 25, 50, Math.SQRT2 * SCENE_SIZE / 2]) {
+    assert.equal((Math.max(d, refDistance) / refDistance) ** -rolloffFactor, 1);
+  }
+  assert.ok(Object.isFrozen(SCENE_PANNER));
+});
+
+test('the scene glides over 20 ms, as the position did before', () => assert.equal(SCENE_GLIDE, 0.02));

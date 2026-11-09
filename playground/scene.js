@@ -42,3 +42,16 @@ export function placement({ x, y }, reference, rolloff) {
 export function pannerPosition({ x, y }) {
   return { x, y: 0, z: -y };
 }
+
+/** Time constant in seconds of the scene's glides (panner position and level): a drag or a slider move does not step the level. */
+export const SCENE_GLIDE = 0.02;
+
+/**
+ * `PannerNode` options for the scene: an equal-power pan with no distance attenuation (the
+ * exponential model with rolloff 0 has gain 1 at every distance). The level comes from
+ * `placement` through a `GainNode` after the panner, whose gain glides: the panner's
+ * `refDistance` and `rolloffFactor` are plain attributes, so changing them would step the level.
+ */
+export const SCENE_PANNER = Object.freeze({
+  panningModel: 'equalpower', distanceModel: 'exponential', refDistance: 1, rolloffFactor: 0, maxDistance: 10000,
+});

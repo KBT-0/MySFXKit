@@ -33,19 +33,23 @@ player) with relative paths, so it runs from any static file server at the repos
    `default`, even where the slider rounds its position to the step.
 7. One button per game event, a `trigger` node of the recipe (`events.js` lists them with
    their `range`, default `[0, 1]`), labelled with the node id, beside a strength slider over
-   that range (step 0.01) that starts at its top. A press calls `player.trigger(id, strength)`;
-   before the first Play there is no player, and the status line says to press Play first. A
-   recipe without a `trigger` node shows no event controls.
+   that range (step 0.01) that starts at its top. A press calls `player.trigger(id, strength)`
+   only while the sound plays (`eventPressBlocked`): before the first Play the status line says
+   to press Play first, and after Stop it says the sound is stopped, so no press waits to sound
+   on the next Play. A recipe without a `trigger` node shows no event controls.
 8. **Listener scene** (brief §6, step 6): a square, 100 m across, seen from above, with the
    listener fixed in the middle facing up and one sound source (the circle). A press or drag
    with mouse, touch or pen moves the source; with the source focused (Tab), the arrow keys
    move it 1 m a step, 10 m with Shift. The source starts on the listener. The player's mono
-   output goes through a Web Audio `PannerNode` (`equalpower` pan, `exponential` distance
-   model, `refDistance` = reference, `rolloffFactor` = rolloff, `maxDistance` 10000) to the
-   speakers; the listener stays at the origin with the default orientation, scene right is
-   panner +x and scene forward is panner -z. The level follows Leeway's placement
-   (`soundscape.hpp`, `place`): `gain = pow(reference / max(reference, distance), rolloff)`,
-   which is Web Audio's exponential model. Two sliders set the reference (1-50 m, default 25,
+   output goes through a Web Audio `PannerNode` (`equalpower` pan, no distance gain: the
+   `exponential` model with `rolloffFactor` 0, `SCENE_PANNER` in `scene.js`), then a
+   `GainNode` that sets the level, to the speakers; the listener stays at the origin with the
+   default orientation, scene right is panner +x and scene forward is panner -z. The level
+   follows Leeway's placement (`soundscape.hpp`, `place`):
+   `gain = pow(reference / max(reference, distance), rolloff)`, which is Web Audio's
+   exponential model. The position and the level glide with a 20 ms time constant
+   (`SCENE_GLIDE`), so a drag or a slider move does not step the level; the panner's own
+   `refDistance` and `rolloffFactor` would change at once. Two sliders set the reference (1-50 m, default 25,
    Leeway's boat; the dashed circle) and the rolloff (0-3, default 0.8, Leeway's) live. A
    read-out shows the distance, that gain (also in dB) and the pan, the sine of the source's
    angle from straight ahead (`scene.js`, `placement`). The scene moves the circle before
@@ -90,7 +94,8 @@ On GitHub Pages (serving `main` at the root) the page is
 ## Tests
 
 `node --test playground/` (also run by `./scripts/check.sh`) tests `recipe_text.js`,
-`events.js`, `scene.js` (pixel to metre, clamping at the scene edge, distance, gain and pan),
+`events.js` (the events of a recipe, when a press may reach the player), `scene.js` (pixel to
+metre, clamping at the scene edge, distance, gain and pan, a panner with no distance gain),
 `wav.js` (the WAV header field by field, file length, clamping, NaN, the duration clamp and the
 file name)
 and `prompt.js` (every block type of `BLOCKS` is described in the prompt, and

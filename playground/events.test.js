@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { listEvents } from './events.js';
+import { listEvents, eventPressBlocked } from './events.js';
 
 const recipe = (nodes) => ({ name: 'x', version: 0, nodes });
 const out = { id: 'out', type: 'noise' };
@@ -25,4 +25,12 @@ test('a hostile id is an ordinary string and pollutes nothing', () => {
   assert.ok(Object.hasOwn(event, 'id'));
   assert.deepEqual(event.range, [0, 1]);
   assert.equal(({}).range, undefined);
+});
+
+test('an event press reaches the player only while the context runs', () => {
+  assert.equal(eventPressBlocked(true, 'running'), null);
+  assert.equal(eventPressBlocked(false, undefined), 'Press Play first, then fire the event.');
+  for (const state of ['suspended', 'closed', 'interrupted']) {
+    assert.equal(eventPressBlocked(true, state), 'The sound is stopped: press Play, then fire the event.');
+  }
 });

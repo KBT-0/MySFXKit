@@ -9,3 +9,14 @@ export function listEvents(recipe) {
     .filter((node) => node.type === 'trigger')
     .map(({ id, range = [0, 1] }) => ({ id, range: [range[0], range[1]] }));
 }
+
+/**
+ * Why a press of an event button must not reach the player, or null when it may: before the
+ * first Play there is no player, and while the `AudioContext` is not `running` (after Stop) the
+ * event would wait and sound on the next Play.
+ */
+export function eventPressBlocked(hasPlayer, contextState) {
+  if (!hasPlayer) return 'Press Play first, then fire the event.';
+  if (contextState !== 'running') return 'The sound is stopped: press Play, then fire the event.';
+  return null;
+}
