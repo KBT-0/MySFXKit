@@ -11,6 +11,10 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
 
 ## Active work
 
+- Handed off (Claude Code, Opus 5.5, 2026-11-09, lead session 5): this lead session ended at
+  about 210k context. The next lead session starts from
+  `docs/handoffs/2026-11-09-lead-handoff-5.md` (screenshots into the slide deck). Delete this
+  line and the handoff file when that session has read them.
 - SFX-23/SFX-26 demo fixes (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 5; worker
   an Opus 5.5 sub-agent at high effort): Kemal chose on 2026-11-09 to fix only the
   demo-visible bugs before the lecture. The scene's panner now only pans (rolloff 0); a
@@ -20,8 +24,9 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   Review: Accept with Manual Checks (Opus 5.5, high, fresh `diff-reviewer`); its Medium (the
   skill's step 5 names the playground's panner as its example) is fixed in the next commit,
   reviewed Accept (Opus 5.5, high, fresh);
-  its Lows are BACKLOG SFX-31 and SFX-32 (SFX-32 from a second fresh review by
-  the parallel lead session). NOT verified: no browser run, no sound heard. Manual checks owed
+  its Low is BACKLOG SFX-31. SFX-32 (a press in the milliseconds while Stop's
+  `suspend()` is pending) is fixed with a `stopping` flag (Sonnet 5.5 worker, medium; review
+  Accept, Opus 5.5, high, fresh). NOT verified: no browser run, no sound heard. Manual checks owed
   to Kemal, in Safari and Chrome:
   1. Play the diesel and drag the reference and rolloff sliders during playback: no step.
   2. Move the source before the first Play, then press Play: the level starts at the
@@ -43,7 +48,7 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
 - Environment (2026-11-09): a Homebrew upgrade of Node on 2026-10-31 left
   `/opt/homebrew/bin/node` unlinked (`brew link node` stops on an existing `npm` link), so
   the gate failed with `node: command not found`. With Kemal's yes the lead added only that
-  link (`ln -s ../Cellar/node/26.13.0_1/bin/node /opt/homebrew/bin/node`; undo: `rm` it);
+  link (`ln -s ../opt/node/bin/node /opt/homebrew/bin/node`, the version-free path, so a `brew upgrade` keeps it; undo: `rm` it);
   `doctor.sh` reads ready. Google Chrome is now installed on this Mac.
 - Browser probe (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 5): Kemal chose to
   automate the manual browser checks. A one-off script outside the repository drove Safari

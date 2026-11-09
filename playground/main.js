@@ -110,7 +110,7 @@ function buildEvents() {
       entry.strength = Number(slider.value);
     });
     button.addEventListener('click', () => {
-      const blocked = eventPressBlocked(Boolean(player), context?.state);
+      const blocked = eventPressBlocked(Boolean(player), stopping ? 'suspended' : context?.state);
       if (blocked) showStatus(blocked);
       else player.trigger(id, entry.strength);
     });
@@ -179,12 +179,16 @@ async function start() {
   }
 }
 
+let stopping = false;  // true while suspend() is pending: context.state still says 'running'
+
 async function togglePlay() {
   if (!context) {
     if (textarea.value !== acceptedText && !acceptText()) return;  // Play takes edited text, as Load does
     await start();  // no await before this line: the click must still count as a gesture
-  } else if (context.state === 'running') await context.suspend();
-  else {
+  } else if (context.state === 'running') {
+    stopping = true;
+    try { await context.suspend(); } finally { stopping = false; }
+  } else {
     const resumed = context.resume();  // first, while the click still counts as a gesture
     if (textarea.value !== acceptedText) await loadText();
     await resumed;
