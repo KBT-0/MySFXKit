@@ -30,10 +30,8 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   yet. Review: Accept with Manual Checks (Opus 5.5, high, fresh
   `diff-reviewer`); three Lows fixed, the fourth is the inert switch. Verified: headless Chrome
   at 1280×800 and 1440×900 with no page scroll, `./scripts/check.sh` PASS. NOT verified:
-  Safari, Firefox sliders, a real projector, drag, keyboard and Play by hand. Manual checks
-  owed to Kemal, in Safari and Chrome at about 1280×720: load the diesel example and confirm
-  the panels scroll; drag the source to all four corners; press Tab through every control
-  and confirm a focus ring shows on each one.
+  Safari, Firefox sliders, a real projector, drag, keyboard and Play by hand. Manual checks:
+  `docs/MANUAL_CHECKS.md`, part A.
 - Playground EN/TR switch (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 6; worker an
   Opus 5.5 sub-agent at high effort): Kemal asked on 2026-11-09 for an English and Turkish UI,
   switchable from the top. The header's EN/TR buttons now switch every UI text without a
@@ -42,8 +40,8 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   the recipe stay English. Review: Accept with Manual Checks (Opus 5.5, high, fresh
   `diff-reviewer`); four Lows fixed; the reverse mapping is BACKLOG SFX-33. Verified:
   `node --test playground/` 62 of 62, `./scripts/check.sh` PASS, headless Chrome 19 of 19.
-  NOT verified: Safari, Firefox, a screen reader, sound by ear. Manual checks owed to Kemal:
-  read the Turkish texts once on the page and switch EN/TR while a sound plays. The six
+  NOT verified: Safari, Firefox, a screen reader, sound by ear. Manual check:
+  `docs/MANUAL_CHECKS.md`, A4. The six
   screenshots in `docs/lecture/screenshots/` were retaken with the Turkish UI in headless
   Chrome (1280×800 at 2x), because `safaridriver` timed out connecting to Safari. The one-off
   script is `deck.mjs` in this session's scratchpad (`shots2/`), a temporary file. With
@@ -61,21 +59,15 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   reviewed Accept (Opus 5.5, high, fresh);
   its Low is BACKLOG SFX-31. SFX-32 (a press in the milliseconds while Stop's
   `suspend()` is pending) is fixed with a `stopping` flag (Sonnet 5.5 worker, medium; review
-  Accept, Opus 5.5, high, fresh). NOT verified: no browser run, no sound heard. Manual checks owed
-  to Kemal, in Safari and Chrome:
-  1. Play the diesel and drag the reference and rolloff sliders during playback: no step.
-  2. Move the source before the first Play, then press Play: the level starts at the
-     read-out's gain and does not fade from full.
-  3. Press Stop, fire an event, press Play: no late thud sounds.
-  4. Compare level and pan at the listener, inside the reference circle, at its edge and in a
-     corner with the build before this commit: they match.
+  Accept, Opus 5.5, high, fresh). NOT verified: no sound heard by ear. Manual checks:
+  `docs/MANUAL_CHECKS.md`, B1, B2 and B9.
 - Lecture slides (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 5; worker an Opus 5.5
   sub-agent at high effort): Kemal chose a Claude Slides artifact (outline open point 6).
   Deck: https://claude.ai/artifact/TiWoR4Y2gmjWSuWZCUB6s1 (private; 34 Turkish slides in the
   outline's block order, speaker notes from the outline, five live-demo cue slides, dashed
   placeholder frames for every `[SCREENSHOT]`/`[VIDEO]` and for open points 2, 4 and 5).
-  NOT verified: nobody has looked at the rendered deck; the .pptx and PDF exports were not
-  tried. Open for Kemal: block 3 is 20 min in the time plan and 25 min in its heading; the
+  NOT verified: nobody has looked at the rendered deck (`docs/MANUAL_CHECKS.md`, part G);
+  the .pptx and PDF exports were not tried. Open for Kemal: block 3 is 20 min in the time plan and 25 min in its heading; the
   outline's `[EKSİK ... SFX-7]` note is out of date (the skill shipped in `ddf2161`); whether
   a slide shows the playground address for the student exercise. Playground screenshots from
   the browser probe are in the parallel session's scratchpad (`probe/01-start.png` to
@@ -111,9 +103,8 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   in BACKLOG SFX-30. Gate: two worker runs of `./scripts/check.sh` FAILED, each only on
   `core/alloc.test.js` (`hull_impact`, BACKLOG SFX-25); the lead's run on the same tree,
   machine idle, PASSED. NOT verified: no browser run of the skill's steps 4 and 5; Claude
-  Code and Codex loading the file as a skill was not tested. Manual check owed to Kemal:
-  1. In Safari, load two recipe players on one `AudioContext` (step 4 makes one player per
-     sound, and each calls `addModule` again): both sounds play and no error shows.
+  Code and Codex loading the file as a skill was not tested. Manual check:
+  `docs/MANUAL_CHECKS.md`, F2.
 - SFX-4 (Claude Code, Opus 5.5 lead, 2026-10-23, lead session 4): draft 1 of the lecture
   outline is committed as `docs/lecture/outline.md` (format chosen by Kemal: a Markdown
   outline; title, date 2026-11-20 and speaker line in PROJECT 2.8). It covers blocks 1–8 of
@@ -132,17 +123,7 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   vendor only; ChatGPT and Gemini NOT tested). Review: round 1 (fresh `diff-reviewer`, one
   Medium and three Lows, all fixed), round 2 Accept with Manual Checks (Opus 5.5, high,
   fresh); Low in BACKLOG SFX-24. NOT verified: the UI was not run in any browser. The skill
-  v0 text is the entry above. Manual checks owed to Kemal, in Safari:
-  1. Serve the repository root (`python3 -m http.server 8000`), open
-     `http://localhost:8000/playground/`, type a description, press Copy prompt and paste
-     it somewhere: the clipboard holds the full prompt ending with the description.
-  2. Open the page from an address with no clipboard access (plain HTTP that is not
-     localhost, such as the Mac's LAN IP): the read-only box shows the prompt, selected,
-     above the recipe box.
-  3. Press Copy prompt with an empty description and with one over 2000 characters: each
-     shows an error, and an open fallback box hides.
-  4. Paste the prompt into a real AI chat (ChatGPT or Gemini) and paste its reply into the
-     recipe box: it loads and plays.
+  v0 text is the entry above. Manual checks: `docs/MANUAL_CHECKS.md`, part E.
 - SFX-6, 2D listener scene part (Claude Code, Opus 5.5 lead, 2026-10-28, lead session 4;
   worker an Opus 5.5 sub-agent at high effort): the playground routes `player.node` through a
   `PannerNode` (equal-power, exponential distance model = Leeway's `place` formula) and shows
@@ -161,25 +142,8 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   `core/classics.test.js` (outside the brief's Owns line, same module, accepted by the
   reviewer). Review: Accept with Manual Checks (Opus 5.5, high, fresh); Lows in BACKLOG
   SFX-27. NOT verified: no agent listened to them. The WAV task added them to the
-  playground list as "(classic)". Manual checks owed to Kemal, from `http://localhost:8000/playground/`:
-  1. In Safari with headphones, drag the source to the right edge: the sound pans right; at
-     the left edge it pans left.
-  2. Move the source and both sliders before the first Play, then press Play: the first
-     sound matches the circle's place and the read-out.
-  3. During playback press Stop, drag the source, press Play, then switch the example: the
-     sound keeps playing at the new place.
-  4. Press Tab to the source: a blue ring shows, arrow keys move it 1 m, Shift with an arrow 10 m.
-  5. On a phone, drag the source by touch: the page does not scroll during the drag, and the
-     page above and below the scene still scrolls.
-  6. Listen to the four classic recipes on the lecture Mac: each is recognisable as a UI
-     click, a jump, an explosion and wind for the lecture.
-  7. Load "Jump (classic)", press Download WAV: `jump.wav` downloads and plays in QuickTime.
-  8. Make the recipe text invalid, press Download WAV: the error list shows, no file
-     downloads, the old recipe's sliders stay.
-  9. Move an input slider and an event strength slider, download: the WAV differs from one
-     rendered at the defaults.
-  10. Set Seconds to 30 and download: "Rendering..." shows before the page freezes; typing
-      100 shows a clamped value.
+  playground list as "(classic)". Manual checks: `docs/MANUAL_CHECKS.md`, A3, B1, B3, C2,
+  part D and F1.
 - SFX-5 (Claude Code, Opus 5.5 lead, 2026-10-22/23, lead session 3; every worker an Opus
   5.5 sub-agent at high effort, every review a fresh Opus 5.5 `diff-reviewer` at high):
   all six remaining Leeway recipes are committed in `core/recipes/` with the blocks they
@@ -188,24 +152,9 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   forwards events (`player.trigger`), and the playground lists all seven examples with an
   event button and strength slider per `trigger` node. Every part passed its review
   (Lows in BACKLOG SFX-17 to SFX-19, SFX-21 to SFX-23). NOT verified: the gull is not in
-  `core/alloc.test.js` (BACKLOG SFX-20). SFX-5 is done once Kemal's checks below pass.
-  Manual checks owed to Kemal, in Safari from `python3 -m http.server 8000` at the
-  repository root, `http://localhost:8000/playground/` (or the Pages URL after a push):
-  1. Load each of the seven examples while a sound plays: each plays, no error shows.
-  2. Listen against Leeway in game: `hull_water` at speed 0, 0.5 and 1 (at 0 it is very
-     quiet, RMS 0.0065, as in Leeway), `city_bed`, `horn`, `ferry` (its first whistle comes
-     at 1 s, then every 35 to 90 s), `gull`. The tests measure pitch, timing and level,
-     not timbre.
-  3. Load "Hull impact (Leeway)", press `impact` before Play: the status asks for Play
-     first and nothing sounds. Press Play, then `impact` at strength 1, 0.5 and 0: the
-     thud weakens and is silent at 0.
-  4. Load the diesel: the event row disappears.
-  5. Press Stop, press `impact`, press Play: note whether a late thud sounds.
-  6. Switch between the seven examples ten times while sound plays, then listen to
-     `city_bed` and `gull` for a minute: report any click or dropout. In V8 the audio path
-     allocates after recipe switches (BACKLOG SFX-20, deferred); Safari is expected to be
-     unaffected, and this check is the only evidence.
-  GitHub Pages is live at `https://kbt-0.github.io/MySFXKit/playground/`; pushes rebuild it.
+  `core/alloc.test.js` (BACKLOG SFX-20). SFX-5 is done once Kemal's checks pass:
+  `docs/MANUAL_CHECKS.md`, B5, B6, B7 and C1. B7 is the only evidence on SFX-20 (V8
+  allocates after recipe switches; Safari is expected to be unaffected). GitHub Pages is live at `https://kbt-0.github.io/MySFXKit/playground/`; pushes rebuild it.
 - SFX-3 (Claude Code, Fable 5.1 lead; Opus 5.5 worker sub-agent, high effort, 2026-10-22):
   playground v0 in `playground/` (paste a recipe, fence stripping, schema errors, Play, one
   slider per recipe input, the bundled diesel), served from the repository root so GitHub
@@ -214,17 +163,8 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   portability (Opus 5.5, high, one after the other), both Accept with Manual Checks; Lows
   in BACKLOG SFX-16. Committed as `7000b14` after Kemal read the summary; pushed, CI green.
   SFX-3 is done once the manual checks pass; then SFX-4 (the presentation draft, due
-  2026-10-29) or SFX-5 (the remaining Leeway recipes) per `docs/BACKLOG.md`. Manual checks owed to Kemal, in Safari from `python3 -m http.server 8000` at the
-  repository root, `http://localhost:8000/playground/`:
-  1. Pick the diesel example, press Play: sound starts on that first click, the button
-     reads Stop, the throttle slider changes the sound.
-  2. Load an invalid recipe while a sound plays: the errors list one line per error, the
-     old sound and sliders stay.
-  3. Load a valid edited recipe while a sound plays: the sound switches and the sliders
-     are rebuilt.
-  4. After enabling Pages (Settings, Pages, branch `main`, folder root), open
-     `https://kbt-0.github.io/MySFXKit/playground/`: the example and the worklet load.
-  Chrome is not installed on this Mac; the Chrome checks stay open.
+  2026-10-29) or SFX-5 (the remaining Leeway recipes) per `docs/BACKLOG.md`. Manual check: `docs/MANUAL_CHECKS.md`, B4; the browser probe covered
+  the rest, and Pages is live.
 - The three earlier commits of today (`547ad4c`, `8c80ed8`, `eeb50a5`) changed gate and CI
   lines and got one reviewer each, not the high tier's two; the portability review of
   2026-10-22 covered their gate and CI lines after the fact (Accept with Manual Checks, one
@@ -249,15 +189,8 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   optimized `render` (exprs compiled to a flat stack program, slots and params in typed
   arrays; output bit-identical to the previous code; `core/alloc.test.js` with the sampling
   heap profiler). Review: Accept with Manual Checks (Opus 5.5, high, fresh); Lows in
-  BACKLOG SFX-15. SFX-2 is done once Kemal's listening check below passes; then SFX-3.
-  Manual checks owed to Kemal:
-  1. Serve the repository root (`python3 -m http.server 8000`), open
-     `http://localhost:8000/adapters/web/demo.html` in Safari: Play gives the diesel, the
-     throttle slider changes it while it plays, Stop/Play toggles, no error shows. Chrome
-     is not installed on this Mac, so the Chrome check is open.
-  2. Node 26 must be installed on the lecture Mac and on the PATH that a git hook sees
-     (`node --version`). CI on ubuntu with Node 26 is green through `eeb50a5` (48 s),
-     `core/alloc.test.js` included.
+  BACKLOG SFX-15. SFX-2 is done once Kemal's checks pass: `docs/MANUAL_CHECKS.md`, B8 and
+  C3. CI on ubuntu with Node 26 is green through `eeb50a5`, `core/alloc.test.js` included.
 
 (task + module + status, or one line per operation pointing at its `docs/<OPERATION>.md`;
 delete when done — an EMPTY section means nothing is in flight, so never park closed work
