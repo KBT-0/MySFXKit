@@ -31,7 +31,10 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   `diff-reviewer`); four Lows fixed; the reverse mapping is BACKLOG SFX-33. Verified:
   `node --test playground/` 62 of 62, `./scripts/check.sh` PASS, headless Chrome 19 of 19.
   NOT verified: Safari, Firefox, a screen reader, sound by ear. Manual checks owed to Kemal:
-  read the Turkish texts once on the page and switch EN/TR while a sound plays.
+  read the Turkish texts once on the page and switch EN/TR while a sound plays. The six
+  screenshots in `docs/lecture/screenshots/` were retaken with the Turkish UI in headless
+  Chrome (1280×800 at 2x), because `safaridriver` timed out connecting to Safari. The one-off
+  script is `deck.mjs` in this session's scratchpad (`shots2/`), a temporary file.
 - [GOTCHA] (Claude Code, Opus 5.5, 2026-11-09): `core/alloc.test.js` (the per-block
   allocation budget) failed twice in a full gate run while another process ran headless
   Chrome and tests on this Mac (241 to 286 KB against a 32 KB budget), and passed alone and
