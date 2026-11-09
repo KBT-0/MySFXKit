@@ -38,11 +38,6 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   Kemal's yes, five of them replaced the dashed placeholder frames in the slide deck (version
   15): slides b3-varyasyon, b3-parametre, b3-olay and b6-canli (two). NOT verified: nobody
   has looked at the rendered slides; the fit was only computed from the slide sizes.
-- [GOTCHA] (Claude Code, Opus 5.5, 2026-11-09): `core/alloc.test.js` (the per-block
-  allocation budget) failed twice in a full gate run while another process ran headless
-  Chrome and tests on this Mac (241 to 286 KB against a 32 KB budget), and passed alone and
-  on reruns. Rerun the gate on an idle machine before treating it as a regression. Permanent
-  home: `docs/GOTCHAS.md`.
 - SFX-23/SFX-26 demo fixes (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 5; worker
   an Opus 5.5 sub-agent at high effort): Kemal chose on 2026-11-09 to fix only the
   demo-visible bugs before the lecture. The scene's panner now only pans (rolloff 0); a
