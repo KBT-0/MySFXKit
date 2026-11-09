@@ -151,8 +151,12 @@ Its **AÇIK** items (§5.1 format, §7 timings, §9 questions) are OPEN until Ke
   lecture must work in every case ("her türlü koşula göre kendimizi ayarlayalım"). Name:
   `MySFXKit`. Licence: MIT. No cases from Kemal's own Steam games.
   Decided: 2026-10-23, approved by Kemal through the question tool.
-- 2.8 DECIDED — the lecture's title, date and speaker line: "Oyun Sesi Nasıl Düşünür?
+- 2.8 SUPERSEDED by §2.9 on 2026-11-09 (the speaker name) — the lecture's title, date and speaker line: "Oyun Sesi Nasıl Düşünür?
   Prosedürel Ses ve 3B Konumlandırma", on 2026-11-20, speaker "Kemal Tan" ("bu arada başlık
   kesinleşti; 20 Kasım - Oyun Sesi Nasıl Düşünür? Prosedürel Ses ve 3B Konumlandırma - Kemal
   Tan"). It replaces the provisional title and the date "about 2026-11-03" of brief §1,
   which is left unchanged. Decided: 2026-10-23, stated by Kemal in chat.
+- 2.9 DECIDED — the lecture's speaker line and time. Title and date stay as in §2.8. The
+  speaker is "Kemal Berhan Tan", as on the lecture poster, with the title "Indie Game
+  Developer". The lecture starts at 11.00 (the poster said 10.00; Kemal: "saat değişicek 11
+  olucak"). Decided: 2026-11-09, approved by Kemal through the question tool.

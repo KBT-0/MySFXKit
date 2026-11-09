@@ -11,11 +11,18 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
 
 ## Active work
 
-- Handed off (Claude Code, Opus 5.5, 2026-11-09, lead session 6): this lead session ended at
-  about 205k context. The next lead session starts from
-  `docs/handoffs/2026-11-09-lead-handoff-6.md`. No agent task is queued; it waits on Kemal's
-  manual checks and his look at the deck. Delete this line and the handoff file when that
-  session has read them.
+- Deck restyle (Claude Code, Opus 5.5, 2026-11-09, lead sessions 7 and 8): no agent task is
+  queued; the lead waits on Kemal's look at the deck and his manual checks.
+  On 2026-11-09 Kemal found the deck looked AI-made and chose direction B ("engineering
+  drawing") from three mocks. Deck version 16 restyles all 34 slides: IBM Plex Sans and Mono,
+  sharp corners, one orange accent, mono kickers, numbered steps, a block-and-page title box
+  on every slide, and big block numbers on each block's first slide. The slide text is
+  unchanged. Deck version 18 changes the cover to "Kemal Berhan Tan", "Indie Game Developer"
+  and 11.00. Kemal approved this on 2026-11-09 as PROJECT §2.9, which supersedes the speaker
+  part of §2.8. `docs/lecture/outline.md` carries the same line. The lecture poster still
+  says 10.00. Version 15 is the deck before the restyle.
+  Kemal approved the
+  user-level skill `~/.claude/skills/antislop-decks` (MIT, jhuse25/anti-slop-kit).
 - Playground visual redesign (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 6; worker
   an Opus 5.5 sub-agent at high effort): Kemal chose a blend of two mocks, "studio desk" layout
   in a dark theme. Only `playground/index.html` and `playground/style.css` changed; behaviour

@@ -33,7 +33,7 @@ bir sese iner. Blok 4b brief §7'de yok; başlıktaki "3B Konumlandırma" için 
 ## Slayt 0 — Kapak
 
 - Başlık: **Oyun Sesi Nasıl Düşünür? Prosedürel Ses ve 3B Konumlandırma**
-- Kemal Tan · İstanbul Kent Üniversitesi · konuk ders · 20 Kasım 2026
+- Kemal Berhan Tan · Indie Game Developer · İstanbul Kent Üniversitesi · konuk ders · 20 Kasım 2026, 11.00 (PROJECT §2.9)
 
 ---
 
