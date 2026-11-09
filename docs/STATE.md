@@ -13,7 +13,7 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
 
 - Handed off (Claude Code, Opus 5.5, 2026-11-09, lead session 5): this lead session ended at
   about 210k context. The next lead session starts from
-  `docs/handoffs/2026-11-09-lead-handoff-5.md` (screenshots into the slide deck). Delete this
+  `docs/handoffs/2026-11-09-lead-handoff-5.md` (playground UI redesign Kemal asked for, then new screenshots into the slide deck). Delete this
   line and the handoff file when that session has read them.
 - SFX-23/SFX-26 demo fixes (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 5; worker
   an Opus 5.5 sub-agent at high effort): Kemal chose on 2026-11-09 to fix only the

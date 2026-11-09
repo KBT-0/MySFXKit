@@ -25,15 +25,42 @@ Açık ve sende:
 
 Açık ve ajanda:
 
-- Beş playground görüntüsünü destedeki yer tutuculara koymak.
+- Playground arayüzünü yenilemek. Bu senin isteğin (2026-11-09): profesyonel, insan
+  elinden çıkmış gibi görünen bir tasarım. Görüntüler bundan sonra yeniden çekilir.
+- Yeni görüntüleri destedeki yer tutuculara koymak.
 
 ## Brief for the next lead session
 
-Route: build · Risk: low (lecture material; no repo code) · Checks: none for the deck;
-`./scripts/check.sh` PASS on any repo commit. Model: lead at high effort; a worker for the
-deck at Opus 5.5, high. Every Agent call names `model` and `effort`.
+Route: deep · Risk: medium for the redesign (playground code that handles pasted recipes),
+low for the deck · Checks: `./scripts/check.sh` PASS; the browser probe after the redesign.
+Model: lead at high effort; a worker for the redesign at Opus 5.5, high, with the
+`frontend-design:frontend-design` skill (already installed; nothing to install); review by a
+fresh `diff-reviewer`. Every Agent call names `model` and `effort`.
 
-1. **Task.** Put the five playground screenshots in `docs/lecture/screenshots/` into the
+1. **Task A, first: playground UI redesign.** Kemal's request (2026-11-09, verbatim): "bu
+   arada şuanki sitenin UI'ı çok kötü, claude'un UIUX forntenddesigin gibi skillerini kurup
+   güzel UI/UX'li, aı tadından ziyade daha profesyonel ve insan elinden çıkmış gibi görünen
+   güzel bi site yapalım arayüz yapalım". Scope: `playground/index.html` and
+   `playground/style.css`, plus `playground/main.js` only where markup it builds needs a class.
+   It is shown on a projector on 2026-11-20: large readable type, high contrast in a lit
+   room, works offline. Keep every element id (`examples`, `recipe`, `load`, `play`,
+   `download-wav`, `copy-prompt`, `inputs`, `events`, `scene`, `source`, `reference`,
+   `rolloff`, `status`, `errors` ...): the tests, the browser probe and the screenshot script
+   use them. Keep the `textContent`-only rule (`playground/AGENTS.md`). Before the worker
+   builds, show Kemal two or three visual directions (a short description or a static mock
+   each) through the question tool and let him pick: taste is his call. Non-goals: no
+   framework, no build step, no web font or CDN (a third-party dependency needs Kemal's
+   approval, and the room may have no internet: use system fonts), no change to `core/`,
+   `adapters/`, the recipe format or behaviour.
+   After the redesign: re-run the browser probe (Safari and Chrome) and the screenshot
+   script, both one-off scripts outside the repo: the parallel session's
+   `/private/tmp/claude-501/-Users-kemalberhantan--Development-Projects-MySFXKit/f4e00726-d4a4-4276-a5f1-592629bd1c02/scratchpad/probe/probe.py`
+   and this session's
+   `/private/tmp/claude-501/-Users-kemalberhantan--Development-Projects-MySFXKit/87b1a55c-d308-4365-9f78-f022e958c884/scratchpad/safari_check/shots.py`
+   (`python3 -I shots.py <served root> <out dir>`; temporary files, they may be gone after a
+   reboot: then write them again from their description in STATE). Replace the files in
+   `docs/lecture/screenshots/`.
+   **Task B, after A: screenshots into the deck.** Put the five playground screenshots in `docs/lecture/screenshots/` into the
    slide deck https://claude.ai/artifact/TiWoR4Y2gmjWSuWZCUB6s1 (Claude Slides, private,
    34 slides, Turkish), replacing the dashed placeholder frames whose wording matches
    `docs/lecture/outline.md` lines 94, 106, 111, 235 and 236 (each line names its file).
@@ -42,26 +69,3 @@ deck at Opus 5.5, high. Every Agent call names `model` and `effort`.
    instructions for images (asset upload needs the `assets` capability). Then open the deck
    and look at every slide once for overflow; report what does not fit. Non-goals: no new
    content, no change to the Leeway placeholders (Kemal records those), no repo code.
-2. **Files (verified 2026-11-09).** `docs/lecture/outline.md`; `docs/lecture/screenshots/`
-   (`slide-diesel.png`, `slide-hull-water.png`, `slide-hull-impact.png`,
-   `slide-recipe-error.png`, `slide-recipe-fixed.png`, `slide-scene.png`; 2560x1616, Safari);
-   `docs/STATE.md`, "Lecture slides". The deck worker reported placeholders on slides 8, 10,
-   11 and 26 for the playground (numbers from its report; check them in the read).
-3. **Constraints.** "Never decide an OPEN item." Outline open points 2, 4, 5 and 6's leftovers
-   are Kemal's. Brief §2 KARAR: the kit is not marketed in the lecture. No AI attribution on
-   any slide or commit. `../project_leeway` (on this Mac:
-   `../MyGameEngine_Projects/project_leeway`) is READ-ONLY.
-4. **Acceptance.** The five placeholders show their screenshots; every slide checked for
-   overflow; STATE's "Lecture slides" entry updated.
-5. **Owner's words.** "hadi seriden devam edelim" (2026-11-09: one week left for the
-   project, then preparation). "tamam neden durdun devam et" (2026-11-09). Commit without
-   asking; ask "push yapayım mı?" through the question tool before every push, then run
-   `git push origin main` yourself.
-6. **Tried and dropped.** Running the gate while a browser automation runs makes
-   `core/alloc.test.js` fail (BACKLOG SFX-25): run browser work and the gate one after the
-   other. Two lead sessions wrote to this checkout on 2026-11-09 (the other one stopped on
-   Kemal's choice; its notes are merged; its stash `stash@{0}` is kept for Kemal).
-   `brew link node` fails on an existing `npm` link; only the `node` link was added.
-7. **State.** HEAD is the commit that adds this file, on `main`. Session cost: NOT RUN.
-
-Delete the "Handed off" line in STATE and this file once they are read.
