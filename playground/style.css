@@ -1,28 +1,299 @@
-/* Readable on a projector: large type and controls, black on white. */
-body { font: 1.4rem/1.4 system-ui, sans-serif; margin: 1.5rem 16px; max-width: 60rem; background: #fff; color: #000; }
-h1 { font-size: 2rem; margin: 0 0 1rem; }
-label { display: block; font-weight: 600; margin: 0.5rem 0; }
-.row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
-.row label { margin: 0; }
-textarea { box-sizing: border-box; width: 100%; font: 1rem/1.3 ui-monospace, Menlo, monospace; padding: 0.5rem; border: 2px solid #000; }
-button, select, #wav-seconds { font: inherit; padding: 0.5rem 1.5rem; border: 2px solid #000; background: #fff; color: #000; }
-button { background: #000; color: #fff; cursor: pointer; }
-button:disabled { opacity: 0.5; cursor: wait; }
-button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible { outline: 4px solid #0050c8; outline-offset: 2px; }
-#status { min-height: 1.4em; font-weight: 600; }
-#errors { color: #b00020; font-family: ui-monospace, Menlo, monospace; font-size: 1.1rem; }
-.input { display: grid; grid-template-columns: minmax(6rem, auto) 1fr 5rem; gap: 1rem; align-items: center; margin: 1rem 0; }
-.input input { width: 100%; height: 2.5rem; }
-.input output { font-variant-numeric: tabular-nums; text-align: right; }
-h2 { font-size: 1.6rem; margin: 2rem 0 0.5rem; }
-/* The listener scene; its SVG units are metres (viewBox -50..50). */
-#scene { display: block; width: 100%; max-width: 32rem; aspect-ratio: 1; touch-action: none; cursor: crosshair; }
-#scene .ground { fill: #f4f4f4; stroke: #000; stroke-width: 0.5; }
-#reference-ring { fill: none; stroke: #000; stroke-width: 0.4; stroke-dasharray: 2 1.5; }
-#scene line.scale { stroke: #000; stroke-width: 0.6; }
-#scene text.scale { font-size: 3.5px; fill: #000; }
-#listener { fill: #000; }
-#source { fill: #d04000; fill-opacity: 0.85; stroke: #000; stroke-width: 0.4; cursor: grab; outline: none; }
-#source:focus-visible { stroke: #0050c8; stroke-width: 1.2; }
-#scene-readout { font-variant-numeric: tabular-nums; }
-#wav-seconds { width: 5em; padding: 0.5rem; }
+/*
+ * A dark studio desk, sized for a projector: large type, AAA text contrast, one amber accent
+ * (the Play button and the live numbers). Ratios are WCAG, measured against --panel.
+ */
+:root {
+  color-scheme: dark;
+  --bg: #15171a;
+  --panel: #1d2025;
+  --well: #0f1114;       /* inset surfaces: the text areas and the scene */
+  --raised: #2a2e35;     /* buttons and fields */
+  --line: #353a42;       /* panel edges and dividers */
+  --edge: #6b727e;       /* control edges: 3.4:1 */
+  --text: #f0eee9;       /* 14.1:1 */
+  --muted: #bcc1ca;      /* 9.0:1, labels and help */
+  --hint: #adb3bc;       /* 7.6:1, placeholders and the empty-state line */
+  --accent: #ffb84d;     /* 9.5:1 */
+  --on-accent: #15171a;  /* 10.5:1 on --accent */
+  --error: #ff9a8f;      /* 8.0:1 */
+  --focus: #8cc8ff;      /* 9.2:1 */
+  --grid: #22262c;       /* the scene's 10 m grid */
+  --mono: ui-monospace, Menlo, monospace;
+  font-size: 19px;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: var(--bg);
+  color: var(--text);
+  font: 1rem/1.4 system-ui, sans-serif;
+}
+
+p, ul, h1, h2 { margin: 0; }
+
+/* Engraved panel labels: small, upper case, spaced, like the print on a hardware front panel. */
+.engrave {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The header bar */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 2rem;
+  padding: 0.7rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+h1 { display: flex; align-items: baseline; gap: 1rem; font-size: 1.5rem; font-weight: 750; letter-spacing: -0.01em; }
+h1 .engrave { display: inline; }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; }
+.pick { display: flex; align-items: center; gap: 0.9rem; }
+
+/* The language switch: a two-key segmented control; the pressed key is lit */
+.lang { display: flex; border: 1px solid var(--edge); border-radius: 4px; }
+.lang button {
+  border: 0;
+  border-radius: 0;
+  padding: 0.45rem 0.8rem;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.lang button + button { border-left: 1px solid var(--edge); }
+.lang button:first-child { border-radius: 3px 0 0 3px; }
+.lang button:last-child { border-radius: 0 3px 3px 0; }
+.lang button:hover { color: var(--text); background: var(--raised); }
+.lang button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+
+/* The desk: the recipe on the left, the controls on the right */
+.desk {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem 1.5rem 1.25rem;
+  min-height: 0;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* Fields */
+textarea, select, input[type=number] {
+  font: inherit;
+  color: var(--text);
+  background: var(--well);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+}
+textarea { width: 100%; padding: 0.5rem 0.7rem; resize: vertical; }
+textarea::placeholder { color: var(--hint); opacity: 1; }
+#recipe, #prompt { font: 0.85rem/1.45 var(--mono); }
+#recipe { flex: 1 1 auto; min-height: 9rem; resize: none; }
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 15rem;
+  padding: 0.45rem 2.6rem 0.45rem 0.8rem;
+  font-weight: 600;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--text) 50%) calc(100% - 1.25rem) 55% / 0.4rem 0.4rem no-repeat,
+    linear-gradient(135deg, var(--text) 50%, transparent 50%) calc(100% - 0.85rem) 55% / 0.4rem 0.4rem no-repeat,
+    var(--raised);
+  cursor: pointer;
+}
+input[type=number] { width: 3.9em; padding: 0.45rem 0.5rem; font-variant-numeric: tabular-nums; text-align: right; }
+
+/* Buttons: raised keys; Play is the one lit key */
+button {
+  font: 600 1rem/1.2 system-ui, sans-serif;
+  color: var(--text);
+  background: var(--raised);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+}
+button:hover { border-color: var(--text); }
+button:active { background: var(--well); }
+#play { min-width: 5.6rem; font-weight: 750; background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+#play:hover { border-color: var(--text); }
+button:disabled, button:disabled:hover { opacity: 0.45; cursor: wait; border-color: var(--edge); }
+#play:disabled { border-color: var(--accent); }
+
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* The left panel */
+.ask { display: flex; flex-direction: column; gap: 0.45rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--line); }
+.ask-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.6rem; align-items: stretch; }
+#request { resize: none; }
+#prompt-box { display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.3rem; }
+.compose > label { margin-top: 0.2rem; }
+.transport { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.seconds { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; color: var(--muted); }
+
+/* The status line, with a state dot: dim while idle, amber with a message, red with errors */
+.console { min-height: 1.6rem; }
+#status { display: flex; gap: 0.6rem; align-items: baseline; font-weight: 600; min-height: 1.4em; }
+#status::before {
+  content: "";
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--edge);
+  transform: translateY(-0.05rem);
+}
+#status:not(:empty)::before { background: var(--accent); }
+.console:has(#errors li) #status::before { background: var(--error); }
+#errors {
+  list-style: none;
+  padding: 0;
+  max-height: 7.5rem;
+  overflow: auto;
+  color: var(--error);
+  font: 0.8rem/1.45 var(--mono);
+}
+#errors li { padding: 0.15rem 0 0.15rem 0.7rem; border-left: 2px solid var(--error); margin-top: 0.3rem; }
+
+/* The right panel */
+.rack { gap: 1.1rem; }
+.channels, .stage { display: flex; flex-direction: column; gap: 0.35rem; }
+.stage { padding-top: 1rem; border-top: 1px solid var(--line); }
+.empty-hint { color: var(--hint); font-size: 0.9rem; }
+.channels:has(#inputs > *) .empty-hint, .channels:has(#events > *) .empty-hint { display: none; }
+
+/* A channel: name, fader, value. The recipe's inputs and events are built this way by main.js. */
+.input {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, max-content) minmax(0, 1fr) minmax(4.2rem, max-content);
+  gap: 1rem;
+  align-items: center;
+  min-height: 2.6rem;
+}
+.input > span { font-weight: 650; overflow-wrap: anywhere; }
+.input > button { padding: 0.4rem 0.9rem; }
+.input output, .readout {
+  color: var(--accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.input output { font-size: 1.25rem; text-align: right; }
+
+/* Range inputs as mixer faders: a dark slot and a light cap with a centre line */
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2.4rem;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  height: 8px;
+  background: var(--well);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 32px;
+  margin-top: -13px;
+  border: 1px solid var(--well);
+  border-radius: 3px;
+  background: linear-gradient(to right, transparent 6px, var(--well) 6px 8px, transparent 8px), #dfe2e7;
+}
+input[type=range]::-moz-range-track {
+  height: 8px;
+  background: var(--well);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+}
+input[type=range]::-moz-range-thumb {
+  width: 16px;
+  height: 32px;
+  border: 1px solid var(--well);
+  border-radius: 3px;
+  background: linear-gradient(to right, transparent 6px, var(--well) 6px 8px, transparent 8px), #dfe2e7;
+}
+input[type=range]:hover::-webkit-slider-thumb { background-color: #fff; }
+
+/* The listener scene; its SVG units are metres (viewBox -50..50), so the 10% grid is 10 m. */
+.stage-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1.1rem; align-items: start; margin: 0.3rem 0 0.4rem; }
+#scene {
+  display: block;
+  width: min(25vw, 37vh, 22rem);
+  min-width: 13rem;
+  aspect-ratio: 1;
+  touch-action: none;
+  cursor: crosshair;
+  box-shadow: inset 0 0 0 1px var(--edge);  /* not a border: pointerToScene maps the whole box to 100 m */
+  border-radius: 4px;
+  background:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px) 0 0 / 10% 10%,
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px) 0 0 / 10% 10%,
+    var(--well);
+}
+#scene .ground { fill: none; }
+#reference-ring { fill: none; stroke: var(--muted); stroke-width: 0.45; stroke-dasharray: 2 1.5; }
+#scene line.scale { stroke: var(--muted); stroke-width: 0.6; }
+#scene text.scale { font: 3.5px system-ui, sans-serif; fill: var(--muted); }
+#listener { fill: var(--text); }
+#source { fill: var(--accent); fill-opacity: 0.85; stroke: var(--well); stroke-width: 0.5; cursor: grab; outline: none; }
+#source:focus-visible { stroke: var(--focus); stroke-width: 1.5; }
+.readout {
+  font-size: 1.05rem;
+  line-height: 1.4;
+  min-height: calc(1.4em + 1rem);
+  padding: 0.5rem 0.75rem;
+  background: var(--well);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+#scene-help { color: var(--muted); font-size: 0.85rem; line-height: 1.45; }
+
+/* Narrow screens: one column, the page scrolls */
+@media (max-width: 900px) {
+  :root { font-size: 18px; }
+  body { display: block; height: auto; }
+  .bar { padding: 0.7rem 16px; }
+  .desk { grid-template-columns: minmax(0, 1fr); padding: 0.8rem 16px 1.25rem; }
+  .panel { overflow: visible; }
+  #recipe { min-height: 14rem; }
+  #scene { width: min(100%, 22rem); min-width: 0; }
+  .tools { width: 100%; }
+  .pick { flex: 1 1 16rem; }
+  select { flex: 1 1 auto; min-width: 0; }
+}
+@media (max-width: 600px) {
+  .stage-body { grid-template-columns: minmax(0, 1fr); }
+  .input { grid-template-columns: minmax(0, 1fr) 4rem; gap: 0.3rem 1rem; }
+  .input > :first-child { grid-column: 1 / -1; }
+  .seconds { margin-left: 0; }
+  .ask-row { grid-template-columns: minmax(0, 1fr); }
+  .ask-row button { justify-self: start; }
+}

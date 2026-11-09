@@ -11,10 +11,18 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
 
 ## Active work
 
-- Handed off (Claude Code, Opus 5.5, 2026-11-09, lead session 5): this lead session ended at
-  about 210k context. The next lead session starts from
-  `docs/handoffs/2026-11-09-lead-handoff-5.md` (playground UI redesign Kemal asked for, then new screenshots into the slide deck). Delete this
-  line and the handoff file when that session has read them.
+- Playground visual redesign (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 6; worker
+  an Opus 5.5 sub-agent at high effort): Kemal chose a blend of two mocks, "studio desk" layout
+  in a dark theme. Only `playground/index.html` and `playground/style.css` changed; behaviour
+  and every element id are unchanged. The header has a static EN/TR switch that does nothing
+  yet. Kemal asked on 2026-11-09 for an English and Turkish UI switchable from the top; that
+  follow-up task is next. Review: Accept with Manual Checks (Opus 5.5, high, fresh
+  `diff-reviewer`); three Lows fixed, the fourth is the inert switch. Verified: headless Chrome
+  at 1280×800 and 1440×900 with no page scroll, `./scripts/check.sh` PASS. NOT verified:
+  Safari, Firefox sliders, a real projector, drag, keyboard and Play by hand. Manual checks
+  owed to Kemal, in Safari and Chrome at about 1280×720: load the diesel example and confirm
+  the panels scroll; drag the source to all four corners; press Tab through every control
+  and confirm a focus ring shows on each one.
 - SFX-23/SFX-26 demo fixes (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 5; worker
   an Opus 5.5 sub-agent at high effort): Kemal chose on 2026-11-09 to fix only the
   demo-visible bugs before the lecture. The scene's panner now only pans (rolloff 0); a
