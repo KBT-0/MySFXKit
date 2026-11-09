@@ -9,6 +9,7 @@ import { listEvents, eventPressBlocked } from './events.js';
 import { buildPrompt } from './prompt.js';
 import { encodeWav, wavFileName, wavSeconds, WAV_EVENT_AT, WAV_SAMPLE_RATE, WAV_SECONDS } from './wav.js';
 import { clampToScene, pointerToScene, placement, pannerPosition, SCENE_GLIDE, SCENE_PANNER } from './scene.js';
+import { DEFAULT_LANGUAGE, isLanguage, translate, exampleLabel, fromEnglish } from './i18n.js';
 
 const examples = document.getElementById('examples');
 const textarea = document.getElementById('recipe');
@@ -32,6 +33,8 @@ const referenceSlider = document.getElementById('reference');
 const referenceValue = document.getElementById('reference-value');
 const rolloffSlider = document.getElementById('rolloff');
 const rolloffValue = document.getElementById('rolloff-value');
+const languageButtons = { en: document.getElementById('lang-en'), tr: document.getElementById('lang-tr') };
+const LANGUAGE_KEY = 'mysfxkit.lang';  // localStorage key of the chosen UI language
 
 let recipe = null;   // the last recipe that passed validation
 let acceptedText = null;  // the textarea text `recipe` came from
@@ -42,8 +45,19 @@ let player = null;
 let panner = null;    // player.node -> panner -> level -> destination, from the first Play
 let level = null;     // the GainNode that carries the scene's distance gain (`placement`)
 let source = { x: 0, y: 0 };  // the sound source in scene metres; the listener is at the origin
+let language = DEFAULT_LANGUAGE;
+let shownStatus = null;  // { key, params } or { text }: kept so a language switch re-renders it
+let playKey = 'transport.play';  // the Play button's label: 'transport.play' or 'transport.stop'
+let shownPlacement = null;  // the scene read-out's last { distance, gain, pan }
 
-function showStatus(text) { status.textContent = text; }
+function say(key, params) { return translate(language, key, params); }
+function renderStatus() {
+  status.textContent = !shownStatus ? '' : shownStatus.key ? say(shownStatus.key, shownStatus.params) : shownStatus.text;
+}
+/** Shows a status message by its i18n key. */
+function showStatus(key, params) { shownStatus = { key, params }; renderStatus(); }
+/** Shows an English message from elsewhere: translated when `fromEnglish` knows it, else as it is. */
+function showText(text) { shownStatus = fromEnglish(text) ?? { text }; renderStatus(); }
 
 /** Shows `[{ node, path, message }]` as a list, one line each; an empty list clears it. */
 function showErrors(errors) {
@@ -100,10 +114,10 @@ function buildEvents() {
     slider.max = String(hi);
     slider.step = '0.01';
     slider.value = String(hi);
-    slider.setAttribute('aria-label', `${id} strength`);
+    slider.setAttribute('aria-label', say('event.strength', { id }));
     const shown = document.createElement('output');
     shown.textContent = String(hi);
-    const entry = { id, strength: hi };  // the exact top; the slider's own value is rounded to its step
+    const entry = { id, strength: hi, slider };  // the exact top; the slider's own value is rounded to its step
     eventStrengths.push(entry);
     slider.addEventListener('input', () => {
       shown.textContent = slider.value;
@@ -111,7 +125,7 @@ function buildEvents() {
     });
     button.addEventListener('click', () => {
       const blocked = eventPressBlocked(Boolean(player), stopping ? 'suspended' : context?.state);
-      if (blocked) showStatus(blocked);
+      if (blocked) showText(blocked);
       else player.trigger(id, entry.strength);
     });
     row.append(button, slider, shown);
@@ -133,13 +147,13 @@ function acceptText() {
   const { recipe: parsed, error } = parseRecipeText(textarea.value);
   if (error) {
     showErrors([]);
-    showStatus(error);
+    showText(error);
     return false;
   }
   const { ok, errors } = validateRecipe(parsed);
   if (!ok) {
     showErrors(errors);
-    showStatus(`Not loaded: the recipe has ${errors.length} error${errors.length === 1 ? '' : 's'}.`);
+    showStatus(errors.length === 1 ? 'status.notLoadedOne' : 'status.notLoadedMany', { count: errors.length });
     return false;
   }
   recipe = parsed;
@@ -147,7 +161,7 @@ function acceptText() {
   buildSliders();
   buildEvents();
   showErrors([]);
-  showStatus(`Loaded "${recipe.name}".`);
+  showStatus('status.loaded', { name: recipe.name });
   return true;
 }
 
@@ -166,7 +180,7 @@ async function start() {
     player = await createRecipePlayer(context);
     player.onError((errors) => {
       showErrors(errors);
-      showStatus('The audio thread reported an error.');
+      showStatus('status.audioError');
     });
     panner = new PannerNode(context, pannerOptions());
     level = new GainNode(context, { gain: sceneGain() });
@@ -193,7 +207,8 @@ async function togglePlay() {
     if (textarea.value !== acceptedText) await loadText();
     await resumed;
   }
-  playButton.textContent = context?.state === 'running' ? 'Stop' : 'Play';
+  playKey = context?.state === 'running' ? 'transport.stop' : 'transport.play';
+  playButton.textContent = say(playKey);
 }
 
 /**
@@ -205,7 +220,7 @@ async function downloadWav() {
   if (textarea.value !== acceptedText && !(await loadText())) return;  // edited text goes through Load first
   const seconds = wavSeconds(wavSecondsField.value);
   wavSecondsField.value = String(seconds);
-  showStatus(`Rendering ${seconds} s of "${recipe.name}"...`);
+  showStatus('status.rendering', { seconds, name: recipe.name });
   await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));  // paint the status before the blocking render
   const samples = renderOffline(recipe, {
     sampleRate: WAV_SAMPLE_RATE,
@@ -221,7 +236,7 @@ async function downloadWav() {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);  // later, not at once: some browsers read the URL after click() returns
-  showStatus(`Downloaded ${link.download} (${seconds} s, mono, 16-bit, ${WAV_SAMPLE_RATE} Hz).`);
+  showStatus('status.downloaded', { file: link.download, seconds, rate: WAV_SAMPLE_RATE });
 }
 
 /** Panner settings for the scene: an equal-power pan at the source's position, no distance gain. */
@@ -244,8 +259,9 @@ function updateScene() {
   referenceRing.setAttribute('r', String(reference));
   referenceValue.textContent = referenceSlider.value;
   rolloffValue.textContent = rolloffSlider.value;
-  const { distance, gain, pan } = placement(source, reference, rolloff);
-  sceneReadout.textContent = `Distance ${distance.toFixed(1)} m · gain ${gain.toFixed(2)} (${(20 * Math.log10(gain)).toFixed(1)} dB) · pan ${pan.toFixed(2)}`;
+  shownPlacement = placement(source, reference, rolloff);
+  renderReadout();
+  const { gain } = shownPlacement;
   if (!panner) return;
   const { x, y, z } = pannerPosition(source);
   const now = context.currentTime;  // a short glide, so a drag or a slider move does not step the level audibly
@@ -253,6 +269,13 @@ function updateScene() {
   panner.positionY.setTargetAtTime(y, now, SCENE_GLIDE);
   panner.positionZ.setTargetAtTime(z, now, SCENE_GLIDE);
   level.gain.setTargetAtTime(gain, now, SCENE_GLIDE);
+}
+
+function renderReadout() {
+  const { distance, gain, pan } = shownPlacement;
+  sceneReadout.textContent = say('scene.readout', {
+    distance: distance.toFixed(1), gain: gain.toFixed(2), db: (20 * Math.log10(gain)).toFixed(1), pan: pan.toFixed(2),
+  });
 }
 
 function moveSource(point) {
@@ -268,7 +291,7 @@ function guarded(action) {
       await action();
     } catch (error) {
       showErrors(error.errors ?? []);
-      showStatus(String(error.message ?? error));
+      showText(String(error.message ?? error));
     } finally {
       loadButton.disabled = playButton.disabled = wavButton.disabled = examples.disabled = textarea.readOnly = false;
     }
@@ -286,17 +309,17 @@ async function copyPrompt() {
   try {
     text = buildPrompt(requestBox.value);
   } catch (error) {
-    showStatus(error.message);
+    showText(error.message);
     return;
   }
   try {
     await navigator.clipboard.writeText(text);  // the first await: the click must still count as a gesture
-    showStatus('Prompt copied. Paste it into your AI, then paste its reply into the recipe box below.');
+    showStatus('status.copied');
   } catch {
     promptText.value = text;
     promptBox.hidden = false;
     promptText.select();
-    showStatus('The browser did not allow copying: copy the prompt above by hand, then paste your AI\'s reply into the recipe box.');
+    showStatus('status.copyRefused');
   }
 }
 
@@ -311,7 +334,7 @@ examples.addEventListener('change', guarded(async () => {
   const example = EXAMPLES[Number(examples.value)];
   if (!examples.value || !example) return;
   const response = await fetch(new URL(example.path, import.meta.url));
-  if (!response.ok) throw new Error(`${example.path}: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(translate('en', 'fetch.failed', { path: example.path, status: response.status }));
   textarea.value = await response.text();
   examples.value = '';  // so choosing the same example again fires `change`
   await loadText();
@@ -347,3 +370,35 @@ sourceDot.addEventListener('keydown', (event) => {
 referenceSlider.addEventListener('input', updateScene);
 rolloffSlider.addEventListener('input', updateScene);
 updateScene();
+
+/**
+ * Shows every text of the page in `lang` at once: the tagged static nodes (`data-i18n` for the
+ * text, `data-i18n-<attribute>` for an attribute), the example names, the Play button, the
+ * event sliders' labels, the scene read-out and the status line. Nothing else changes.
+ */
+function applyLanguage(lang) {
+  language = lang;
+  document.documentElement.lang = lang;
+  for (const [code, button] of Object.entries(languageButtons)) button.setAttribute('aria-pressed', String(code === lang));
+  for (const node of document.querySelectorAll('[data-i18n]')) node.textContent = say(node.dataset.i18n);
+  for (const attribute of ['aria-label', 'aria-roledescription', 'placeholder']) {
+    for (const node of document.querySelectorAll(`[data-i18n-${attribute}]`)) {
+      node.setAttribute(attribute, say(node.getAttribute(`data-i18n-${attribute}`)));
+    }
+  }
+  EXAMPLES.forEach(({ label }, i) => { examples.options[i + 1].textContent = exampleLabel(lang, label); });
+  playButton.textContent = say(playKey);
+  for (const { id, slider } of eventStrengths) slider.setAttribute('aria-label', say('event.strength', { id }));
+  renderReadout();
+  renderStatus();
+}
+
+for (const [code, button] of Object.entries(languageButtons)) {
+  button.addEventListener('click', () => {
+    applyLanguage(code);
+    try { localStorage.setItem(LANGUAGE_KEY, code); } catch { /* storage blocked: the choice lasts for this page only */ }
+  });
+}
+let storedLanguage = null;
+try { storedLanguage = localStorage.getItem(LANGUAGE_KEY); } catch { /* storage blocked: English */ }
+if (isLanguage(storedLanguage)) applyLanguage(storedLanguage);

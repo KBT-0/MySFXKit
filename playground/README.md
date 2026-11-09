@@ -74,6 +74,19 @@ player) with relative paths, so it runs from any static file server at the repos
    - The render runs on the page's main thread; while it runs (a fraction of a second for 30 s
      of a small recipe) the page does not respond.
 
+10. **EN / TR** in the header switches every text a person reads between English (the
+   default) and Turkish at once, without a reload: labels, help text, placeholders, button
+   texts, `aria-label`s, the example names, the scene read-out and the current status line.
+   Nothing else changes: a playing sound, the loaded recipe, the sliders and the scene stay as
+   they are. The strings and a pure lookup (`translate`) live in `i18n.js`; `index.html` tags
+   each static node with `data-i18n` (its text) or `data-i18n-<attribute>` (an attribute such
+   as `aria-label` or `placeholder`), and `main.js` applies them through `textContent` and
+   `setAttribute`. English messages that `events.js`, `recipe_text.js` and `prompt.js` return
+   are matched back to their key (`fromEnglish`) and shown translated. The choice is kept in
+   `localStorage` (`mysfxkit.lang`) and restored on load; where storage throws, the switch
+   still works for the page. Not translated: the validator's error list (core), the prompt
+   for the AI and the recipe JSON.
+
 The page never evaluates text: pasted text is data for `JSON.parse` and the core interpreter,
 and it reaches the page only through `textContent` or an element property (`value`).
 
@@ -98,6 +111,9 @@ On GitHub Pages (serving `main` at the root) the page is
 metre, clamping at the scene edge, distance, gain and pan, a panner with no distance gain),
 `wav.js` (the WAV header field by field, file length, clamping, NaN, the duration clamp and the
 file name)
+`i18n.js` (every key in both languages with the same `{name}` placeholders, the lookup, a
+Turkish name for every example, the English text of every tagged node in `index.html`, every
+key `main.js` shows, and the English messages of other modules matched back to their key),
 and `prompt.js` (every block type of `BLOCKS` is described in the prompt, and
 `EXAMPLE_RECIPE` validates and renders audible output), and checks that every entry of
 `EXAMPLES` names a file that exists and passes `validateRecipe`. The page itself has no automated test; it is checked by hand in a browser.

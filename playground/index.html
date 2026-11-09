@@ -12,10 +12,10 @@
     <h1>MySFXKit <span class="engrave">Playground</span></h1>
     <div class="tools">
       <p class="pick">
-        <label for="examples" class="engrave">Example</label>
-        <select id="examples"><option value="">Choose an example</option></select>
+        <label for="examples" class="engrave" data-i18n="example.label">Example</label>
+        <select id="examples"><option value="" data-i18n="example.choose">Choose an example</option></select>
       </p>
-      <div class="lang" role="group" aria-label="Language">
+      <div class="lang" role="group" aria-label="Language" data-i18n-aria-label="lang.group">
         <button id="lang-en" type="button" aria-pressed="true">EN</button>
         <button id="lang-tr" type="button" aria-pressed="false">TR</button>
       </div>
@@ -24,24 +24,24 @@
   <main class="desk">
     <div class="panel compose">
       <div class="ask">
-        <label for="request" class="engrave">Describe the sound (any language)</label>
+        <label for="request" class="engrave" data-i18n="ask.label">Describe the sound (any language)</label>
         <div class="ask-row">
-          <textarea id="request" rows="2" autocomplete="off" placeholder="A small boat's single-cylinder diesel engine"></textarea>
-          <button id="copy-prompt" type="button">Copy prompt</button>
+          <textarea id="request" rows="2" autocomplete="off" data-i18n-placeholder="ask.placeholder" placeholder="A small boat's single-cylinder diesel engine"></textarea>
+          <button id="copy-prompt" type="button" data-i18n="ask.copy">Copy prompt</button>
         </div>
         <div id="prompt-box" hidden>
-          <label for="prompt" class="engrave">The prompt: select it, copy it and paste it into your AI</label>
+          <label for="prompt" class="engrave" data-i18n="prompt.label">The prompt: select it, copy it and paste it into your AI</label>
           <textarea id="prompt" rows="4" readonly spellcheck="false"></textarea>
         </div>
       </div>
-      <label for="recipe" class="engrave">Paste a recipe (JSON, or the whole reply of your AI)</label>
-      <textarea id="recipe" rows="14" spellcheck="false" autocomplete="off" placeholder="Choose an example above, or paste a recipe here, then press Load."></textarea>
+      <label for="recipe" class="engrave" data-i18n="recipe.label">Paste a recipe (JSON, or the whole reply of your AI)</label>
+      <textarea id="recipe" rows="14" spellcheck="false" autocomplete="off" data-i18n-placeholder="recipe.placeholder" placeholder="Choose an example above, or paste a recipe here, then press Load."></textarea>
       <p class="transport">
-        <button id="load" type="button">Load</button>
+        <button id="load" type="button" data-i18n="transport.load">Load</button>
         <button id="play" type="button">Play</button>
-        <button id="download-wav" type="button">Download WAV</button>
+        <button id="download-wav" type="button" data-i18n="transport.wav">Download WAV</button>
         <span class="seconds">
-          <label for="wav-seconds">Seconds</label>
+          <label for="wav-seconds" data-i18n="transport.seconds">Seconds</label>
           <input id="wav-seconds" type="number" min="0.5" max="30" step="0.5" value="5">
         </span>
       </p>
@@ -52,13 +52,13 @@
     </div>
     <div class="panel rack">
       <section class="channels" aria-labelledby="channels-title">
-        <h2 id="channels-title" class="engrave">Inputs and events</h2>
+        <h2 id="channels-title" class="engrave" data-i18n="channels.title">Inputs and events</h2>
         <div id="inputs"></div>
         <div id="events"></div>
-        <p class="empty-hint">A loaded recipe's inputs and game events show here; some recipes have none.</p>
+        <p class="empty-hint" data-i18n="channels.empty">A loaded recipe's inputs and game events show here; some recipes have none.</p>
       </section>
       <section class="stage" aria-labelledby="scene-title">
-        <h2 id="scene-title" class="engrave">Listener scene</h2>
+        <h2 id="scene-title" class="engrave" data-i18n="scene.title">Listener scene</h2>
         <div class="stage-body">
           <svg id="scene" viewBox="-50 -50 100 100" aria-labelledby="scene-title">
             <rect class="ground" x="-50" y="-50" width="100" height="100"/>
@@ -66,13 +66,13 @@
             <line class="scale" x1="-46" y1="46" x2="-36" y2="46"/>
             <text class="scale" x="-46" y="43.5">10 m</text>
             <polygon id="listener" points="0,-3 2.5,2.5 -2.5,2.5"/>
-            <circle id="source" r="2.5" tabindex="0" role="button" aria-roledescription="movable sound source" aria-label="Sound source" aria-describedby="scene-help scene-readout"/>
+            <circle id="source" r="2.5" tabindex="0" role="button" aria-roledescription="movable sound source" data-i18n-aria-roledescription="scene.sourceRole" aria-label="Sound source" data-i18n-aria-label="scene.source" aria-describedby="scene-help scene-readout"/>
           </svg>
-          <p id="scene-help">Seen from above: the listener (triangle) stands in the middle, facing up. Drag the sound source (circle), or focus it with Tab and move it with the arrow keys (Shift: 10 m a step). The square is 100 m across; the dashed circle is the reference distance.</p>
+          <p id="scene-help" data-i18n="scene.help">Seen from above: the listener (triangle) stands in the middle, facing up. Drag the sound source (circle), or focus it with Tab and move it with the arrow keys (Shift: 10 m a step). The square is 100 m across; the dashed circle is the reference distance.</p>
         </div>
         <p class="readout"><output id="scene-readout" aria-live="polite"></output></p>
-        <label class="input"><span>reference (m)</span><input id="reference" type="range" min="1" max="50" step="1" value="25"><output id="reference-value">25</output></label>
-        <label class="input"><span>rolloff</span><input id="rolloff" type="range" min="0" max="3" step="0.1" value="0.8"><output id="rolloff-value">0.8</output></label>
+        <label class="input"><span data-i18n="scene.reference">reference (m)</span><input id="reference" type="range" min="1" max="50" step="1" value="25"><output id="reference-value">25</output></label>
+        <label class="input"><span data-i18n="scene.rolloff">rolloff</span><input id="rolloff" type="range" min="0" max="3" step="0.1" value="0.8"><output id="rolloff-value">0.8</output></label>
       </section>
     </div>
   </main>

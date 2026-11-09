@@ -15,14 +15,28 @@ true next month, are in `docs/AGENTS.md`, "STATE.md discipline" (the reasons: `d
   an Opus 5.5 sub-agent at high effort): Kemal chose a blend of two mocks, "studio desk" layout
   in a dark theme. Only `playground/index.html` and `playground/style.css` changed; behaviour
   and every element id are unchanged. The header has a static EN/TR switch that does nothing
-  yet. Kemal asked on 2026-11-09 for an English and Turkish UI switchable from the top; that
-  follow-up task is next. Review: Accept with Manual Checks (Opus 5.5, high, fresh
+  yet. Review: Accept with Manual Checks (Opus 5.5, high, fresh
   `diff-reviewer`); three Lows fixed, the fourth is the inert switch. Verified: headless Chrome
   at 1280×800 and 1440×900 with no page scroll, `./scripts/check.sh` PASS. NOT verified:
   Safari, Firefox sliders, a real projector, drag, keyboard and Play by hand. Manual checks
   owed to Kemal, in Safari and Chrome at about 1280×720: load the diesel example and confirm
   the panels scroll; drag the source to all four corners; press Tab through every control
   and confirm a focus ring shows on each one.
+- Playground EN/TR switch (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 6; worker an
+  Opus 5.5 sub-agent at high effort): Kemal asked on 2026-11-09 for an English and Turkish UI,
+  switchable from the top. The header's EN/TR buttons now switch every UI text without a
+  reload; English is the default and unchanged; the choice is kept in `localStorage`
+  (`mysfxkit.lang`). Strings live in `playground/i18n.js`. Validator errors, the AI prompt and
+  the recipe stay English. Review: Accept with Manual Checks (Opus 5.5, high, fresh
+  `diff-reviewer`); four Lows fixed; the reverse mapping is BACKLOG SFX-33. Verified:
+  `node --test playground/` 62 of 62, `./scripts/check.sh` PASS, headless Chrome 19 of 19.
+  NOT verified: Safari, Firefox, a screen reader, sound by ear. Manual checks owed to Kemal:
+  read the Turkish texts once on the page and switch EN/TR while a sound plays.
+- [GOTCHA] (Claude Code, Opus 5.5, 2026-11-09): `core/alloc.test.js` (the per-block
+  allocation budget) failed twice in a full gate run while another process ran headless
+  Chrome and tests on this Mac (241 to 286 KB against a 32 KB budget), and passed alone and
+  on reruns. Rerun the gate on an idle machine before treating it as a regression. Permanent
+  home: `docs/GOTCHAS.md`.
 - SFX-23/SFX-26 demo fixes (Claude Code, Opus 5.5 lead, 2026-11-09, lead session 5; worker
   an Opus 5.5 sub-agent at high effort): Kemal chose on 2026-11-09 to fix only the
   demo-visible bugs before the lecture. The scene's panner now only pans (rolloff 0); a
