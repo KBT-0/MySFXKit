@@ -91,7 +91,7 @@ Bu bloktaki her dinleme, Kemal'in Mac'inde playground'dan projeksiyona çalını
   arasında, aralığı ±%3 kayıyor. Sonra (anlatım) "hepsi aynı olsaydı" farkını sözle anlat.
 - Dinleme: "Gull (Leeway)": her çağrı ya kahkaha (%35) ya uzun çağrı (%65); notaların
   sayısı ve uzunluğu her seferinde yeniden çekiliyor.
-- `[SCREENSHOT: playground, Diesel yüklü, throttle slider görünür]` çekildi: `docs/lecture/screenshots/slide-diesel.png` (Safari, 2026-11-09)
+- `[SCREENSHOT: playground, Diesel yüklü, throttle slider görünür]` çekildi: `docs/lecture/screenshots/slide-diesel.png` (Chrome, Türkçe arayüz, 2026-11-09); destede: b3-varyasyon
 
 **Slayt 3.2 — Katmanlama**
 - Bir ses birkaç basit sesin toplamıdır.
@@ -103,12 +103,12 @@ Bu bloktaki her dinleme, Kemal'in Mac'inde playground'dan projeksiyona çalını
 - Dinleme: Diesel çalarken gaz slider'ını 0'dan 1'e sür: vuruş saniyede 4.5'ten 13'e çıkıyor,
   ses parlaklaşıyor; motor gaza 1.2 sn'de yetişiyor (anında değil, ataleti var).
 - Dinleme: "Hull water (Leeway)", hız 0 → 0.5 → 1.
-- `[SCREENSHOT: playground, Hull water, speed slider]` çekildi: `docs/lecture/screenshots/slide-hull-water.png` (Safari, 2026-11-09)
+- `[SCREENSHOT: playground, Hull water, speed slider]` çekildi: `docs/lecture/screenshots/slide-hull-water.png` (Chrome, Türkçe arayüz, 2026-11-09); destede: b3-parametre
 
 **Slayt 3.4 — Olay (event)**
 - Bazı sesler sürekli değil, bir anda olur: çarpma, zıplama, tık.
 - Dinleme: "Hull impact (Leeway)", Play, sonra `impact` düğmesi, güç 1 → 0.5 → 0.
-- `[SCREENSHOT: playground, Hull impact, impact düğmesi ve güç slider'ı]` çekildi: `docs/lecture/screenshots/slide-hull-impact.png` (Safari, 2026-11-09)
+- `[SCREENSHOT: playground, Hull impact, impact düğmesi ve güç slider'ı]` çekildi: `docs/lecture/screenshots/slide-hull-impact.png` (Chrome, Türkçe arayüz, 2026-11-09); destede: b3-olay
 
 **Slayt 3.5 — Konum**
 - Ses bir yerde duruyor; nasıl duyulduğu dinleyicinin nerede olduğuna bağlı.
@@ -232,8 +232,8 @@ Yedek: Leeway Mac'te açılmazsa blok 1'in videosu ve blok 3'teki playground din
 4. Tarifin içini aç: hangi düğüm kaynak, hangisi filtre, hangisi zarf; blok 3.6'daki üç adım
    tarifin içinde nerede?
 5. Bir değeri elle değiştir (örnek: filtre kesimini), Load: ses değişir.
-- `[SCREENSHOT: playground, yapıştırılmış bir tarif ve doğrulama hatası örneği]` çekildi: `docs/lecture/screenshots/slide-recipe-error.png` (Safari, 2026-11-09)
-- `[SCREENSHOT: playground, aynı tarif düzeltilmiş ve çalıyor]` çekildi: `docs/lecture/screenshots/slide-recipe-fixed.png` (Safari, 2026-11-09)
+- `[SCREENSHOT: playground, yapıştırılmış bir tarif ve doğrulama hatası örneği]` çekildi: `docs/lecture/screenshots/slide-recipe-error.png` (Chrome, Türkçe arayüz, 2026-11-09); destede: b6-canli
+- `[SCREENSHOT: playground, aynı tarif düzeltilmiş ve çalıyor]` çekildi: `docs/lecture/screenshots/slide-recipe-fixed.png` (Chrome, Türkçe arayüz, 2026-11-09); destede: b6-canli
 
 **İsteğe bağlı öğrenci alıştırması** (laptop ve kulaklığı olanlar):
 - Aynı akışı kendi AI'larıyla yaparlar: siteyi açar, tarifi kendi AI'larından ister,
