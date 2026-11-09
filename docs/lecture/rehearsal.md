@@ -23,7 +23,10 @@ each needs the Mac's screen, speakers or the room.
    olarak bir metin dosyasına kaydet.
 6. **Tam prova:** saat tutarak bir kez baştan sona (120 dk planı, outline "Zaman planı").
    Uzun gelen bloğu not et.
-7. **STATE.md'deki elle kontrol listeleri:** playground'un yeni özellikleri (Copy prompt,
+7. **Sunumun çevrimdışı kopyası:** desteyi (`docs/STATE.md`, "Lecture slides") PDF olarak
+   indir. İnternet kapalıyken ders Mac'inde aç. Hiçbir slaytta taşma olmadığını gör. PDF'i
+   masaüstüne ve USB belleğe koy.
+8. **STATE.md'deki elle kontrol listeleri:** playground'un yeni özellikleri (Copy prompt,
    2B sahne, WAV, klasik örnekler) için yazılı kontrolleri bu provada yap.
 
 ## B. Bir gün önce
@@ -52,7 +55,7 @@ each needs the Mac's screen, speakers or the room.
 | Bozulan | Yedek |
 |---|---|
 | Salon sesi | Kulaklıkla dinleyip anlat; blok 1 için sesli videoyu yine dene |
-| İnternet | Yerel sunucu (`python3 -m http.server 8000`) ve hazır örnekler |
+| İnternet | Yerel sunucu (`python3 -m http.server 8000`) ve hazır örnekler; slaytlar için A.7'deki PDF |
 | Yapay zekâ yanıt vermiyor | A.5'te kaydedilen yedek tarifler, ya da hazır örneklerin "içini aç" anlatımı |
 | Leeway açılmıyor | Yedek video (A.1), blok 4b'yi playground'daki 2B sahneyle anlat |
 | Pan duyulmuyor (tek hoparlör) | Sahnede yalnızca mesafeyi göster; pan'ı kulaklıkla tek kişiye dinlet ya da anlat |
